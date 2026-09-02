@@ -190,9 +190,13 @@ fun AdmobBanner(adsRemoved: Boolean) {
             modifier = Modifier.fillMaxWidth(),
             factory = { context ->
                 AdView(context).apply {
-                    setAdSize(AdSize.BANNER)
                     adUnitId = "ca-app-pub-2587866419282101/4852569054"
-                    loadAd(AdRequest.Builder().build())
+                    setAdSize(AdSize.BANNER)
+                    try {
+                        loadAd(AdRequest.Builder().build())
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
         )
@@ -202,15 +206,19 @@ fun AdmobBanner(adsRemoved: Boolean) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        MobileAds.initialize(this) {}
-        val adManager = AdManager(this)
-        val billingManager = BillingManager(this)
+        try {
+            MobileAds.initialize(this) {}
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        val adManager = try { AdManager(this) } catch (e: Exception) { null }
+        val billingManager = try { BillingManager(this) } catch (e: Exception) { null }
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
                 CompositionLocalProvider(
-                    LocalAdManager provides adManager,
-                    LocalBillingManager provides billingManager
+                    LocalAdManager provides (adManager ?: AdManager(this)), // fallback just for typing, though usually won't crash
+                    LocalBillingManager provides (billingManager ?: BillingManager(this))
                 ) {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         AppNavHost(
@@ -797,7 +805,6 @@ fun RowScope.StatBox(label: String, value: String, valueColor: Color = Color(0xF
     Box(
         modifier = Modifier
             .weight(1f)
-            .shadow(2.dp, RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.05f))
             .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
             .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
             .padding(8.dp)
@@ -1141,6 +1148,16 @@ fun MarbleSortScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Star, contentDescription = "Coins", tint = Color(0xFFFBBF24), modifier = Modifier.size(24.dp))
+                            Text(
+                                text = "+50",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color(0xFFFBBF24),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                         Spacer(modifier = Modifier.height(24.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(
@@ -1682,50 +1699,6 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             contentPadding = PaddingValues(top = 16.dp, bottom = 170.dp)
                         ) {
                             item {
-                                
-                                Text("Premium", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                val productDetail = productDetails["remove_ads"]
-                                val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: "$10.00"
-                                
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-                                        .background(if (appState.adsRemoved) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-                                        .border(
-                                            width = if (appState.adsRemoved) 2.dp else 1.dp,
-                                            color = if (appState.adsRemoved) Color(0xFF82A6F1) else Color.White.copy(alpha = 0.6f),
-                                            shape = RoundedCornerShape(16.dp)
-                                        )
-                                        .padding(16.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24))
-                                        Text("Remove Ads", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                    if (appState.adsRemoved) {
-                                        Text("Owned", color = Color(0xFF82A6F1), fontWeight = FontWeight.ExtraBold)
-                                    } else {
-                                        Button(
-                                            onClick = {
-                                                billingManager.initiatePurchaseFlow(activity, "remove_ads") {
-                                                    viewModel.removeAds()
-                                                }
-                                            },
-                                            shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90E4AD), contentColor = Color(0xFF1E293B))
-                                        ) {
-                                            Text(price, fontWeight = FontWeight.ExtraBold)
-                                        }
-                                    }
-                                }
-                            }
-
-                            item {
                                 Text("Buy Coins", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -1746,7 +1719,6 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f))
                                         .background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                                         .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                                         .padding(16.dp),
@@ -1771,8 +1743,45 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 }
                             }
                             
+                            if (!appState.adsRemoved) {
+                                item {
+                                    Spacer(modifier = Modifier.height(32.dp))
+                                    Text("Premium", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    
+                                    val productDetail = productDetails["remove_ads"]
+                                    val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: "$9.99"
+                                    
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                                            .padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24)) // Ideally a no-ads icon, but Star is fine for now
+                                            Text("Remove Ads", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Button(
+                                            onClick = {
+                                                billingManager.initiatePurchaseFlow(activity, "remove_ads") {
+                                                    viewModel.removeAds()
+                                                }
+                                            },
+                                            shape = CircleShape,
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90E4AD), contentColor = Color(0xFF1E293B))
+                                        ) {
+                                            Text(price, fontWeight = FontWeight.ExtraBold)
+                                        }
+                                    }
+                                }
+                            }
+
                             item {
-                                
+                                Spacer(modifier = Modifier.height(32.dp))
                                 Text("Themes", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -1794,7 +1803,6 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f))
                                         .background(if (isActive) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                                         .border(
                                             width = if (isActive) 2.dp else 1.dp,
@@ -1840,7 +1848,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                         ) {
                             Text("Settings", color = Color(0xFF1E293B), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
                             
-                            Row(modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f)).background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Sound", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
                                     checked = appState.soundEnabled,
@@ -1849,7 +1857,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 )
                             }
                             
-                            Row(modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f)).background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Haptic Feedback", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
                                     checked = appState.hapticEnabled,
