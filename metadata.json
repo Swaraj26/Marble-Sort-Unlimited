@@ -1,0 +1,8 @@
+{
+  "name": "Marble Sort Ultimate",
+  "description": "A classic marble ball sort tube puzzle game.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
