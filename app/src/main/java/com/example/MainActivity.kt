@@ -868,7 +868,7 @@ fun MarbleSortScreen(
     var showPowerUpDialog by remember { mutableStateOf(PowerUpType.NONE) }
     var showGiveUpDialog by remember { mutableStateOf(false) }
     val adManager = LocalAdManager.current
-    val activity = LocalContext.current as Activity
+    val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
     val appState by viewModel.appState.collectAsState()
 
     if (showPowerUpDialog != PowerUpType.NONE) {
@@ -1011,7 +1011,7 @@ fun MarbleSortScreen(
                                 if (remaining > 0) {
                                     val mins = (remaining / 60000).toInt()
                                     val secs = ((remaining % 60000) / 1000).toInt()
-                                    timerText = String.format("%02d:%02d", mins, secs)
+                                    timerText = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
                                 } else {
                                     timerText = "00:00"
                                 }
@@ -1167,7 +1167,7 @@ fun MarbleSortScreen(
                                 Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
                             }
                             val adManager = LocalAdManager.current
-                            val activity = LocalContext.current as Activity
+                            val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                             Button(
                                 onClick = {
                                     val levelsCompleted = viewModel.appState.value.highestUnlockedLevel - 1
@@ -1224,7 +1224,7 @@ fun MarbleSortScreen(
                                 Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
                             }
                             val adManager = LocalAdManager.current
-                            val activity = LocalContext.current as Activity
+                            val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                             Button(
                                 onClick = {
                                     adManager.showRewardedAd(activity) {
@@ -1619,7 +1619,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             if (remaining > 0) {
                                 val mins = (remaining / 60000).toInt()
                                 val secs = ((remaining % 60000) / 1000).toInt()
-                                timerText = String.format("%02d:%02d", mins, secs)
+                                timerText = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
                             } else {
                                 timerText = "00:00"
                             }
@@ -1690,7 +1690,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                     }
                     Screen.SHOP -> {
                         val billingManager = LocalBillingManager.current
-                        val activity = LocalContext.current as Activity
+                        val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                         val productDetails by billingManager.productDetails.collectAsState()
                         
                         LazyColumn(
