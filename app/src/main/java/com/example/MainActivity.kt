@@ -151,7 +151,11 @@ class AdManager(private val context: Context) {
         }
     }
 
-    fun showInterstitialAd(activity: Activity, onClosed: () -> Unit) {
+    fun showInterstitialAd(activity: Activity, adsRemoved: Boolean, onClosed: () -> Unit) {
+        if (adsRemoved) {
+            onClosed()
+            return
+        }
         if (interstitialAd != null) {
             interstitialAd?.fullScreenContentCallback = object: FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
@@ -176,7 +180,8 @@ val LocalAdManager = compositionLocalOf<AdManager> { error("No AdManager provide
 val LocalBillingManager = compositionLocalOf<BillingManager> { error("No BillingManager provided") }
 
 @Composable
-fun AdmobBanner() {
+fun AdmobBanner(adsRemoved: Boolean) {
+    if (adsRemoved) return
     Box(
         modifier = Modifier.fillMaxWidth().background(Color.Black),
         contentAlignment = Alignment.Center
@@ -263,7 +268,8 @@ data class AppState(
     val showDailyBonusDialog: Boolean = false,
     val unlockedThemes: List<String> = listOf("CLASSIC"),
     val activeTheme: String = "CLASSIC",
-    val nextLifeTime: Long = 0L
+    val nextLifeTime: Long = 0L,
+    val adsRemoved: Boolean = false
 )
 
 enum class SoundEvent {
@@ -324,7 +330,8 @@ data class AppStateEntity(
     val lastClaimedDate: String,
     val unlockedThemes: String,
     val activeTheme: String,
-    val nextLifeTime: Long = 0L
+    val nextLifeTime: Long = 0L,
+    val adsRemoved: Boolean = false
 )
 
 @Dao
@@ -336,7 +343,7 @@ interface AppStateDao {
     suspend fun saveAppState(appState: AppStateEntity)
 }
 
-@Database(entities = [AppStateEntity::class], version = 3, exportSchema = false)
+@Database(entities = [AppStateEntity::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appStateDao(): AppStateDao
 }
@@ -372,7 +379,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                         lastClaimedDate = entity.lastClaimedDate,
                         unlockedThemes = entity.unlockedThemes.split(",").filter { it.isNotBlank() },
                         activeTheme = entity.activeTheme,
-                        nextLifeTime = entity.nextLifeTime
+                        nextLifeTime = entity.nextLifeTime,
+                        adsRemoved = entity.adsRemoved
                     )
                 }
             }
@@ -400,7 +408,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                         lastClaimedDate = state.lastClaimedDate,
                         unlockedThemes = state.unlockedThemes.joinToString(","),
                         activeTheme = state.activeTheme,
-                        nextLifeTime = state.nextLifeTime
+                        nextLifeTime = state.nextLifeTime,
+                        adsRemoved = state.adsRemoved
                     )
                 )
             }
@@ -706,6 +715,10 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     
     fun addCoins(amount: Int) {
         _appState.update { it.copy(coins = it.coins + amount) }
+    }
+    
+    fun removeAds() {
+        _appState.update { it.copy(adsRemoved = true) }
     }
 
     fun spendCoins(amount: Int): Boolean {
@@ -1097,7 +1110,7 @@ fun MarbleSortScreen(
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
         ) {
-            AdmobBanner()
+            AdmobBanner(appState.adsRemoved)
         }
 
         // Win Overlay
@@ -1142,7 +1155,7 @@ fun MarbleSortScreen(
                                 onClick = {
                                     val levelsCompleted = viewModel.appState.value.highestUnlockedLevel - 1
                                     if (levelsCompleted % 2 == 0) {
-                                        adManager.showInterstitialAd(activity) {
+                                        adManager.showInterstitialAd(activity, appState.adsRemoved) {
                                             viewModel.nextLevel()
                                         }
                                     } else {
@@ -1456,6 +1469,15 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifi
 @Composable
 fun AppNavHost(modifier: Modifier = Modifier, viewModel: BallSortViewModel = viewModel()) {
     val appState by viewModel.appState.collectAsState()
+    val billingManager = LocalBillingManager.current
+    val restoredPurchases by billingManager.restoredPurchases.collectAsState()
+    
+    LaunchedEffect(restoredPurchases) {
+        if (restoredPurchases.contains("remove_ads") && !appState.adsRemoved) {
+            viewModel.removeAds()
+        }
+    }
+
     Crossfade(targetState = appState.screen, modifier = modifier, label = "screen_transition") { screen ->
         when (screen) {
             Screen.GAME -> MarbleSortScreen(viewModel = viewModel)
@@ -1652,12 +1674,57 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                     Screen.SHOP -> {
                         val billingManager = LocalBillingManager.current
                         val activity = LocalContext.current as Activity
+                        val productDetails by billingManager.productDetails.collectAsState()
                         
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp),
                             contentPadding = PaddingValues(top = 16.dp, bottom = 170.dp)
                         ) {
+                            item {
+                                
+                                Text("Premium", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                val productDetail = productDetails["remove_ads"]
+                                val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: "$10.00"
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+                                        .background(if (appState.adsRemoved) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                                        .border(
+                                            width = if (appState.adsRemoved) 2.dp else 1.dp,
+                                            color = if (appState.adsRemoved) Color(0xFF82A6F1) else Color.White.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(16.dp)
+                                        )
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24))
+                                        Text("Remove Ads", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    if (appState.adsRemoved) {
+                                        Text("Owned", color = Color(0xFF82A6F1), fontWeight = FontWeight.ExtraBold)
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                billingManager.initiatePurchaseFlow(activity, "remove_ads") {
+                                                    viewModel.removeAds()
+                                                }
+                                            },
+                                            shape = CircleShape,
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90E4AD), contentColor = Color(0xFF1E293B))
+                                        ) {
+                                            Text(price, fontWeight = FontWeight.ExtraBold)
+                                        }
+                                    }
+                                }
+                            }
+
                             item {
                                 Text("Buy Coins", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -1672,7 +1739,9 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             items(coinPacks.size) { index ->
                                 val pack = coinPacks[index]
                                 val amount = pack.first
-                                val price = if (amount == 1000) "$0.99" else if (amount == 5000) "$3.99" else "$7.99"
+                                val productDetail = productDetails[pack.second]
+                                val defaultPrice = if (amount == 1000) "$0.99" else if (amount == 5000) "$3.99" else "$7.99"
+                                val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: defaultPrice
                                 
                                 Row(
                                     modifier = Modifier
@@ -1703,7 +1772,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             }
                             
                             item {
-                                Spacer(modifier = Modifier.height(32.dp))
+                                
                                 Text("Themes", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -1813,7 +1882,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
             
             // Banner Ad at the very bottom
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                AdmobBanner()
+                AdmobBanner(appState.adsRemoved)
             }
         }
 
