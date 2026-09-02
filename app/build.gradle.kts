@@ -117,7 +117,7 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
-  implementation("com.android.billingclient:billing-ktx:6.2.1")
+  implementation("com.android.billingclient:billing-ktx:8.0.0")
   implementation("com.google.android.gms:play-services-ads:23.0.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

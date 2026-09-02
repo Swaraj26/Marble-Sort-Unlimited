@@ -21,9 +21,11 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
     init {
         billingClient = BillingClient.newBuilder(context)
             .setListener(this)
-            .enablePendingPurchases()
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+            )
             .build()
-            
+
         startConnection()
     }
 
@@ -40,7 +42,7 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
             }
         })
     }
-    
+
     private val _restoredPurchases = MutableStateFlow<Set<String>>(emptySet())
     val restoredPurchases: StateFlow<Set<String>> = _restoredPurchases.asStateFlow()
 
@@ -48,8 +50,9 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
-            
-        billingClient.queryPurchasesAsync(params) { billingResult, purchases ->
+
+        // Explicitly typed parameters added here for safety
+        billingClient.queryPurchasesAsync(params) { billingResult: BillingResult, purchases: List<Purchase> ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val ownedProducts = mutableSetOf<String>()
                 for (purchase in purchases) {
@@ -89,10 +92,14 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
             .setProductList(productList)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        // Updated callback to handle QueryProductDetailsResult instead of a raw list
+        billingClient.queryProductDetailsAsync(params) { billingResult: BillingResult, productDetailsResult: QueryProductDetailsResult ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                val map = productDetailsList.associateBy { it.productId }
-                _productDetails.value = map
+                val list = productDetailsResult.productDetailsList
+                if (!list.isNullOrEmpty()) {
+                    val map = list.associateBy { it.productId }
+                    _productDetails.value = map
+                }
             }
         }
     }
@@ -101,7 +108,7 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
         val productDetail = _productDetails.value[productId]
         if (productDetail != null) {
             pendingCallbacks[productId] = onSuccess
-            
+
             val productDetailsParamsList = listOf(
                 BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(productDetail)
@@ -110,7 +117,7 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
             val billingFlowParams = BillingFlowParams.newBuilder()
                 .setProductDetailsParamsList(productDetailsParamsList)
                 .build()
-                
+
             billingClient.launchBillingFlow(activity, billingFlowParams)
         } else {
             Toast.makeText(context, "Product not available", Toast.LENGTH_SHORT).show()
@@ -128,12 +135,12 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
             val isConsumable = purchase.products.any { it.startsWith("coin_pack") }
-            
+
             if (isConsumable) {
                 val consumeParams = ConsumeParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken)
                     .build()
-    
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val consumeResult = billingClient.consumePurchase(consumeParams)
                     if (consumeResult.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
@@ -158,12 +165,12 @@ class BillingManager(private val context: Context) : PurchasesUpdatedListener {
             }
         }
     }
-    
+
     private fun acknowledgePurchase(purchase: Purchase) {
         val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
             .setPurchaseToken(purchase.purchaseToken)
             .build()
-        
+
         CoroutineScope(Dispatchers.Main).launch {
             val ackResult = billingClient.acknowledgePurchase(acknowledgePurchaseParams)
             if (ackResult.responseCode == BillingClient.BillingResponseCode.OK) {
