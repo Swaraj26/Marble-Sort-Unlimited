@@ -1,5 +1,6 @@
 package com.example
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
@@ -41,6 +42,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.shadow
 import kotlin.math.max
@@ -52,9 +55,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -96,6 +97,66 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+
+data class ThemePalette(
+    val backgroundBrush: Brush,
+    val tubeBorderColor: Color,
+    val tubeGlassAlpha: Float,
+    val selectionGlowColor: Color,
+    val textPrimary: Color,
+    val surfaceContainer: Color,
+    val buttonAccent: Color
+)
+
+fun getThemePalette(themeId: String): ThemePalette {
+    return when (themeId) {
+        "NEON" -> ThemePalette(
+            backgroundBrush = Brush.linearGradient(listOf(Color(0xFF0F172A), Color(0xFF000000))),
+            tubeBorderColor = Color(0xFF00FFCC).copy(alpha = 0.6f),
+            tubeGlassAlpha = 0.05f,
+            selectionGlowColor = Color(0xFFFF00FF),
+            textPrimary = Color.White,
+            surfaceContainer = Color.White.copy(alpha = 0.1f),
+            buttonAccent = Color(0xFF00FFCC)
+        )
+        "PASTEL" -> ThemePalette(
+            backgroundBrush = Brush.linearGradient(listOf(Color(0xFFFDE8E9), Color(0xFFE3E7FA), Color(0xFFE6F4EA))),
+            tubeBorderColor = Color.White.copy(alpha = 0.8f),
+            tubeGlassAlpha = 0.4f,
+            selectionGlowColor = Color(0xFFFCA5A5),
+            textPrimary = Color(0xFF1E293B),
+            surfaceContainer = Color.White.copy(alpha = 0.35f),
+            buttonAccent = Color(0xFFFCA5A5)
+        )
+        "COSMIC" -> ThemePalette(
+            backgroundBrush = Brush.radialGradient(listOf(Color(0xFF1E1B4B), Color(0xFF020617))),
+            tubeBorderColor = Color(0xFF8B5CF6).copy(alpha = 0.6f),
+            tubeGlassAlpha = 0.15f,
+            selectionGlowColor = Color(0xFF38BDF8),
+            textPrimary = Color.White,
+            surfaceContainer = Color.White.copy(alpha = 0.15f),
+            buttonAccent = Color(0xFF38BDF8)
+        )
+        "FANTASY" -> ThemePalette(
+            backgroundBrush = Brush.linearGradient(listOf(Color(0xFF2E1065), Color(0xFF4C1D95), Color(0xFF1E1B4B))),
+            tubeBorderColor = Color(0xFFFBBF24).copy(alpha = 0.6f),
+            tubeGlassAlpha = 0.2f,
+            selectionGlowColor = Color(0xFFFBBF24),
+            textPrimary = Color.White,
+            surfaceContainer = Color.White.copy(alpha = 0.15f),
+            buttonAccent = Color(0xFFFBBF24)
+        )
+        else -> ThemePalette( // CLASSIC
+            backgroundBrush = Brush.linearGradient(listOf(Color(0xFFFCD5CE), Color(0xFFD8E2DC), Color(0xFFB5E4CB))),
+            tubeBorderColor = Color.White.copy(alpha = 0.5f),
+            tubeGlassAlpha = 0.3f,
+            selectionGlowColor = Color(0xFF6366F1).copy(alpha = 0.3f),
+            textPrimary = Color(0xFF1E293B),
+            surfaceContainer = Color.White.copy(alpha = 0.35f),
+            buttonAccent = Color(0xFF82A6F1)
+        )
+    }
+}
 
 class AdManager(private val context: Context) {
     var rewardedAd: RewardedAd? = null
@@ -256,7 +317,8 @@ data class GameState(
     val isWon: Boolean = false,
     val isLost: Boolean = false,
     val undoStack: List<MoveAction> = emptyList(),
-    val level: Int = 1
+    val level: Int = 1,
+    val earnedCoins: Int = 0
 ) {
     val movesLeft: Int get() = kotlin.math.max(0, maxMoves - moveCount)
 }
@@ -471,7 +533,6 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun dismissDailyBonus() {
-        // Option to just hide without claiming, but claiming is automatic upon click usually.
         _appState.update { it.copy(showDailyBonusDialog = false) }
     }
 
@@ -660,11 +721,14 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             tube.balls.isEmpty() || (tube.balls.size == tube.maxCapacity && tube.balls.all { it.color == tube.balls.first().color })
         }
         if (won && !state.isWon) {
+            val rewardAmount = 25 // Set your dynamic or constant reward here
+
             _soundEvents.tryEmit(SoundEvent.WIN)
-            _uiState.update { it.copy(isWon = true, selectedTubeIndex = null) }
+            // Pass the reward to the UI state
+            _uiState.update { it.copy(isWon = true, selectedTubeIndex = null, earnedCoins = rewardAmount) }
             _appState.update {
                 it.copy(
-                    coins = it.coins + 50,
+                    coins = it.coins + rewardAmount, // Add the variable to the wallet
                     highestUnlockedLevel = max(it.highestUnlockedLevel, state.level + 1)
                 )
             }
@@ -800,27 +864,31 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 }
 
 @Composable
-fun RowScope.StatBox(label: String, value: String, valueColor: Color = Color(0xFF1E293B)) {
+fun RowScope.StatBox(label: String, value: String, palette: ThemePalette) {
     Box(
         modifier = Modifier
             .weight(1f)
-            .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+            .background(palette.surfaceContainer, RoundedCornerShape(12.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
             .padding(8.dp)
     ) {
         Column {
-            Text(label, fontSize = 8.sp, color = Color(0xFF1E293B).copy(alpha = 0.8f), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-            Text(value, fontSize = 16.sp, color = valueColor, fontWeight = FontWeight.ExtraBold)
+            Text(label, fontSize = 8.sp, color = palette.textPrimary.copy(alpha = 0.8f), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
+            Text(value, fontSize = 16.sp, color = palette.textPrimary, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
 
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun MarbleSortScreen(
     modifier: Modifier = Modifier,
     viewModel: BallSortViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val appState by viewModel.appState.collectAsState()
+    val palette = getThemePalette(appState.activeTheme)
+
     val context = LocalContext.current
     val soundManager = remember { SoundManager(context) }
 
@@ -831,8 +899,7 @@ fun MarbleSortScreen(
     val view = androidx.compose.ui.platform.LocalView.current
     LaunchedEffect(viewModel) {
         viewModel.soundEvents.collect { event ->
-            val appStateVal = viewModel.appState.value
-            if (appStateVal.soundEnabled) {
+            if (appState.soundEnabled) {
                 when(event) {
                     SoundEvent.SELECT -> soundManager.playSelect()
                     SoundEvent.MOVE -> soundManager.playMove()
@@ -840,7 +907,7 @@ fun MarbleSortScreen(
                     SoundEvent.ERROR -> {}
                 }
             }
-            if (appStateVal.hapticEnabled) {
+            if (appState.hapticEnabled) {
                 when(event) {
                     SoundEvent.MOVE, SoundEvent.WIN -> {
                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -868,7 +935,6 @@ fun MarbleSortScreen(
     var showGiveUpDialog by remember { mutableStateOf(false) }
     val adManager = LocalAdManager.current
     val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
-    val appState by viewModel.appState.collectAsState()
 
     if (showPowerUpDialog != PowerUpType.NONE) {
         val isUndo = showPowerUpDialog == PowerUpType.UNDO
@@ -957,17 +1023,7 @@ fun MarbleSortScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFFFCD5CE), // Soft peach
-                        Color(0xFFD8E2DC), // Light grey/green
-                        Color(0xFFB5E4CB)  // Soft mint/cyan
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset.Infinite
-                )
-            )
+            .background(brush = palette.backgroundBrush)
     ) {
 
         Column(
@@ -987,13 +1043,13 @@ fun MarbleSortScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF6B8CE0))
-                            .background(Color(0xFF82A6F1), RoundedCornerShape(10.dp))
+                            .background(palette.surfaceContainer, RoundedCornerShape(10.dp))
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Home", tint = Color(0xFF1E293B), modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Home", tint = palette.textPrimary, modifier = Modifier.size(20.dp))
                     }
                     Text(
                         text = "Level ${state.level}",
-                        color = Color(0xFF172554),
+                        color = palette.textPrimary,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -1018,8 +1074,8 @@ fun MarbleSortScreen(
                             }
                         }
                     }
-                    StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText)
-                    StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "")
+                    StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, palette = palette)
+                    StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", palette = palette)
                 }
             }
 
@@ -1030,8 +1086,8 @@ fun MarbleSortScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatBox(label = "MOVES", value = state.moveCount.toString().padStart(3, '0'))
-                StatBox(label = "MOVES LEFT", value = state.movesLeft.toString().padStart(3, '0'))
+                StatBox(label = "MOVES", value = state.moveCount.toString().padStart(3, '0'), palette = palette)
+                StatBox(label = "MOVES LEFT", value = state.movesLeft.toString().padStart(3, '0'), palette = palette)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1042,6 +1098,7 @@ fun MarbleSortScreen(
                 tubes = state.tubes,
                 selectedTubeIndex = state.selectedTubeIndex,
                 activeTheme = appState.activeTheme,
+                palette = palette,
                 onTubeSelect = { viewModel.selectTube(it) }
             )
 
@@ -1062,13 +1119,13 @@ fun MarbleSortScreen(
                     modifier = Modifier
                         .size(84.dp)
                         .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF76DB9E))
-                        .background(if (!state.isWon && !state.isLost) Color(0xFF90E4AD) else Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
+                        .background(if (!state.isWon && !state.isLost) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(24.dp)),
                     enabled = !state.isWon && !state.isLost
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Tube", tint = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.Add, contentDescription = "Add Tube", tint = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
 
@@ -1079,13 +1136,13 @@ fun MarbleSortScreen(
                     modifier = Modifier
                         .size(84.dp)
                         .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF6B8CE0))
-                        .background(if (isUndoEnabled) Color(0xFF82A6F1) else Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
+                        .background(if (isUndoEnabled) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(24.dp)),
                     enabled = isUndoEnabled
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (isUndoEnabled) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
 
@@ -1154,7 +1211,7 @@ fun MarbleSortScreen(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.Star, contentDescription = "Coins", tint = Color(0xFFFBBF24), modifier = Modifier.size(24.dp))
                             Text(
-                                text = "+50",
+                                text = "+${state.earnedCoins}",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = Color(0xFFFBBF24),
                                 fontWeight = FontWeight.Bold
@@ -1255,6 +1312,7 @@ fun TubeGrid(
     tubes: List<Tube>,
     selectedTubeIndex: Int?,
     activeTheme: String,
+    palette: ThemePalette,
     onTubeSelect: (Int) -> Unit
 ) {
     BoxWithConstraints(
@@ -1305,6 +1363,7 @@ fun TubeGrid(
                             tube = tube,
                             isSelected = selectedTubeIndex == index,
                             activeTheme = activeTheme,
+                            palette = palette,
                             tubeWidth = tubeWidth,
                             tubeHeight = tubeHeight,
                             ballSize = ballSize,
@@ -1325,6 +1384,7 @@ fun TubeView(
     tube: Tube,
     isSelected: Boolean,
     activeTheme: String,
+    palette: ThemePalette,
     tubeWidth: androidx.compose.ui.unit.Dp = 48.dp,
     tubeHeight: androidx.compose.ui.unit.Dp = 176.dp,
     ballSize: androidx.compose.ui.unit.Dp = 36.dp,
@@ -1333,9 +1393,7 @@ fun TubeView(
     bottomPadding: androidx.compose.ui.unit.Dp = 6.dp,
     onTubeClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.2f)
-    val ringColor = if (isSelected) Color(0xFF6366F1).copy(alpha = 0.3f) else Color.Transparent
-
+    val ringColor = if (isSelected) palette.selectionGlowColor else Color.Transparent
     val totalHeight = tubeHeight + liftOffset
 
     Box(
@@ -1349,7 +1407,7 @@ fun TubeView(
                 onClick = onTubeClick
             )
     ) {
-        // Tube Container (Glass effect)
+        // Tube Container (Dynamic Glass effect)
         Box(
             modifier = Modifier
                 .width(tubeWidth)
@@ -1358,16 +1416,16 @@ fun TubeView(
                 .background(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.1f),
-                            Color.White.copy(alpha = 0.3f),
-                            Color.White.copy(alpha = 0.1f)
+                            Color.White.copy(alpha = palette.tubeGlassAlpha * 0.5f),
+                            Color.White.copy(alpha = palette.tubeGlassAlpha),
+                            Color.White.copy(alpha = palette.tubeGlassAlpha * 0.5f)
                         )
                     ),
                     shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
                 )
                 .border(
                     width = (3 * (tubeWidth.value / 48f)).dp,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = palette.tubeBorderColor,
                     shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
                 )
                 .border(
@@ -1382,7 +1440,7 @@ fun TubeView(
                     .fillMaxSize()
                     .border(
                         width = (1 * (tubeWidth.value / 48f)).dp,
-                        color = Color.Black.copy(alpha = 0.05f),
+                        color = Color.Black.copy(alpha = if(activeTheme == "NEON") 0f else 0.05f),
                         shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
                     )
             )
@@ -1403,6 +1461,7 @@ fun TubeView(
                 ball = ball,
                 isSelectedLifting = isLifting,
                 activeTheme = activeTheme,
+                palette = palette,
                 modifier = Modifier
                     .offset(y = yOffset)
                     .size(ballSize)
@@ -1412,8 +1471,8 @@ fun TubeView(
 }
 
 @Composable
-fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifier: Modifier = Modifier) {
-    val isLiftingBorder = if (isSelectedLifting) Color.White.copy(alpha = 0.5f) else Color.Transparent
+fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palette: ThemePalette, modifier: Modifier = Modifier) {
+    val isLiftingBorder = if (isSelectedLifting) palette.selectionGlowColor.copy(alpha = 0.8f) else Color.Transparent
     Canvas(modifier = modifier) {
         val radius = size.width / 2f
 
@@ -1425,18 +1484,64 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifi
                 style = Stroke(width = 4.dp.toPx())
             )
             drawCircle(
-                color = ball.color.copy(alpha = 0.5f),
-                style = Stroke(width = 8.dp.toPx())
+                color = ball.color.copy(alpha = 0.4f),
+                style = Stroke(width = 12.dp.toPx())
             )
         } else if (activeTheme == "PASTEL") {
             // Pastel Theme
-            val pastelColor = ball.color.copy(alpha = 0.4f)
+            val pastelColor = ball.color.copy(alpha = 0.8f)
             drawCircle(color = pastelColor)
             drawCircle(
-                color = Color.White.copy(alpha = 0.5f),
-                radius = size.width * 0.2f,
+                color = Color.White.copy(alpha = 0.6f),
+                radius = size.width * 0.25f,
                 center = Offset(size.width * 0.3f, size.height * 0.3f)
             )
+        } else if (activeTheme == "COSMIC") {
+            // Cosmic Theme
+            drawCircle(color = ball.color)
+            // 3D Shadow rendering
+            drawCircle(
+                color = Color.Black.copy(alpha = 0.5f),
+                radius = radius,
+                center = Offset(radius * 1.3f, radius * 1.3f)
+            )
+            // Orbital ring
+            drawArc(
+                color = Color.White.copy(alpha = 0.5f),
+                startAngle = -20f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = Offset(-radius * 0.2f, radius * 0.6f),
+                size = Size(size.width * 1.4f, size.height * 0.4f),
+                style = Stroke(width = 2.dp.toPx())
+            )
+            // Starlight points
+            drawCircle(color = Color.White, radius = 2f, center = Offset(radius * 0.4f, radius * 0.5f))
+            drawCircle(color = Color.White, radius = 1.5f, center = Offset(radius * 1.5f, radius * 0.3f))
+
+        } else if (activeTheme == "FANTASY") {
+            // Fantasy Crystal Theme
+            val path = Path().apply {
+                moveTo(radius, 0f) // top point
+                lineTo(size.width, radius) // right point
+                lineTo(radius, size.height) // bottom point
+                lineTo(0f, radius) // left point
+                close()
+            }
+            drawPath(path, ball.color)
+            drawPath(path, Color.White.copy(alpha = 0.3f), style = Stroke(width = 2.dp.toPx()))
+
+            // Star sparkle highlight
+            val sparkle = Path().apply {
+                moveTo(radius, radius * 0.2f)
+                quadraticBezierTo(radius, radius, radius * 1.8f, radius)
+                quadraticBezierTo(radius, radius, radius, radius * 1.8f)
+                quadraticBezierTo(radius, radius, radius * 0.2f, radius)
+                quadraticBezierTo(radius, radius, radius, radius * 0.2f)
+                close()
+            }
+            drawPath(sparkle, Color.White.copy(alpha = 0.8f))
+
         } else {
             // CLASSIC / GLOSSY Theme
 
@@ -1506,49 +1611,49 @@ fun AppNavHost(modifier: Modifier = Modifier, viewModel: BallSortViewModel = vie
 }
 
 @Composable
-fun StatPill(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, text: String, label: String, isLarge: Boolean = false) {
+fun StatPill(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, text: String, label: String, palette: ThemePalette, isLarge: Boolean = false) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .shadow(if (isLarge) 4.dp else 2.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.05f))
-            .background(Color.White.copy(alpha = 0.35f), CircleShape)
-            .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+            .background(palette.surfaceContainer, CircleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
             .padding(horizontal = if (isLarge) 16.dp else 8.dp, vertical = if (isLarge) 8.dp else 4.dp)
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (isLarge) 24.dp else 16.dp))
         Spacer(Modifier.width(if (isLarge) 8.dp else 6.dp))
-        Text(text, color = Color(0xFF1E293B), fontWeight = FontWeight.ExtraBold, fontSize = if (isLarge) 18.sp else 14.sp)
+        Text(text, color = palette.textPrimary, fontWeight = FontWeight.ExtraBold, fontSize = if (isLarge) 18.sp else 14.sp)
         if (label.isNotEmpty()) {
             Spacer(Modifier.width(4.dp))
-            Text(label, color = Color(0xFF64748B), fontSize = if (isLarge) 12.sp else 10.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = palette.textPrimary.copy(alpha = 0.8f), fontSize = if (isLarge) 12.sp else 10.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun LevelNode(level: Int, isCompleted: Boolean, isCurrent: Boolean, isLocked: Boolean, isHardLevel: Boolean = false) {
+fun LevelNode(level: Int, isCompleted: Boolean, isCurrent: Boolean, isLocked: Boolean, palette: ThemePalette, isHardLevel: Boolean = false) {
     val size = if (isCurrent) 90.dp else 70.dp
     val color = if (isCompleted) {
-        Color(0xFF82A6F1) // completed - blue
+        palette.buttonAccent.copy(alpha = 0.8f) // completed
     } else if (isCurrent) {
-        Color(0xFF90E4AD) // current - green
+        palette.buttonAccent // current
     } else {
-        Color.White.copy(alpha = 0.35f) // locked - glass
+        palette.surfaceContainer // locked - glass
     }
-    val contentColor = if (isLocked) Color(0xFF94A3B8) else Color.White
+    val contentColor = if (isLocked) palette.textPrimary.copy(alpha = 0.5f) else Color.White
 
     Box(
         modifier = Modifier.height(140.dp).width(120.dp),
         contentAlignment = Alignment.Center
     ) {
-        Box(modifier = Modifier.width(8.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.4f)))
+        Box(modifier = Modifier.width(8.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.2f)))
 
         Box(
             modifier = Modifier
                 .size(size)
-                .shadow(if (isCurrent) 8.dp else 4.dp, CircleShape, spotColor = if (isCurrent) Color(0xFF76DB9E) else Color.Black.copy(alpha = 0.05f))
+                .shadow(if (isCurrent) 8.dp else 4.dp, CircleShape, spotColor = if (isCurrent) palette.buttonAccent else Color.Black.copy(alpha = 0.05f))
                 .background(color, CircleShape)
-                .border(2.dp, Color.White.copy(alpha = 0.8f), CircleShape),
+                .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text("$level", color = contentColor, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
@@ -1569,9 +1674,11 @@ fun TabItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
     }
 }
 
+@SuppressLint("ContextCastToActivity")
 @Composable
 fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
     val appState by viewModel.appState.collectAsState()
+    val palette = getThemePalette(appState.activeTheme)
 
     if (appState.showDailyBonusDialog) {
         AlertDialog(
@@ -1595,17 +1702,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFFFCD5CE), // Soft peach
-                        Color(0xFFD8E2DC), // Light grey/green
-                        Color(0xFFB5E4CB)  // Soft mint/cyan
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset.Infinite
-                )
-            )
+            .background(brush = palette.backgroundBrush)
     ) {
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1630,8 +1727,8 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                     }
                 }
 
-                StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, isLarge = true)
-                StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", isLarge = true)
+                StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, palette = palette, isLarge = true)
+                StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", palette = palette, isLarge = true)
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -1661,6 +1758,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                         isCompleted = level < appState.highestUnlockedLevel,
                                         isCurrent = level == appState.highestUnlockedLevel,
                                         isLocked = level > appState.highestUnlockedLevel,
+                                        palette = palette,
                                         isHardLevel = level % 5 == 0
                                     )
                                 }
@@ -1671,10 +1769,8 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Button(
                                     onClick = { if (appState.lives > 0) viewModel.startLevel(appState.highestUnlockedLevel) },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (appState.lives > 0) Color(0xFF90E4AD) else Color.White.copy(alpha = 0.5f),
-                                        contentColor = Color(0xFF1E293B),
-                                        disabledContainerColor = Color.White.copy(alpha = 0.5f),
-                                        disabledContentColor = Color(0xFF1E293B).copy(alpha = 0.5f)
+                                        containerColor = if (appState.lives > 0) palette.buttonAccent else palette.surfaceContainer,
+                                        contentColor = if (appState.lives > 0) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f),
                                     ),
                                     shape = CircleShape,
                                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
@@ -1701,7 +1797,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             contentPadding = PaddingValues(top = 16.dp, bottom = 170.dp)
                         ) {
                             item {
-                                Text("Buy Coins", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Buy Coins", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
@@ -1721,15 +1817,15 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-                                        .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                                        .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
+                                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                                         .padding(16.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Icon(Icons.Default.Star, contentDescription = "Coins", tint = Color(0xFFFBBF24))
-                                        Text("$amount Coins", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                        Text("$amount Coins", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Button(
                                         onClick = {
@@ -1738,7 +1834,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                             }
                                         },
                                         shape = CircleShape,
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90E4AD), contentColor = Color(0xFF1E293B))
+                                        colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
                                     ) {
                                         Text(price, fontWeight = FontWeight.ExtraBold)
                                     }
@@ -1748,7 +1844,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             if (!appState.adsRemoved) {
                                 item {
                                     Spacer(modifier = Modifier.height(32.dp))
-                                    Text("Premium", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text("Premium", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     val productDetail = productDetails["remove_ads"]
@@ -1757,15 +1853,15 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-                                            .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                                            .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                                             .padding(16.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24)) // Ideally a no-ads icon, but Star is fine for now
-                                            Text("Remove Ads", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                            Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24))
+                                            Text("Remove Ads", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                         }
                                         Button(
                                             onClick = {
@@ -1774,7 +1870,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                                 }
                                             },
                                             shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90E4AD), contentColor = Color(0xFF1E293B))
+                                            colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
                                         ) {
                                             Text(price, fontWeight = FontWeight.ExtraBold)
                                         }
@@ -1784,7 +1880,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
 
                             item {
                                 Spacer(modifier = Modifier.height(32.dp))
-                                Text("Themes", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                                Text("Themes", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
@@ -1792,8 +1888,8 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Triple("CLASSIC", "Classic", 0),
                                 Triple("NEON", "Neon Glow", 5000),
                                 Triple("PASTEL", "Pastel Dream", 10000),
-                                Triple("COSMIC", "Cosmic", 25000),
-                                Triple("FANTASY", "Fantasy", 50000)
+                                Triple("COSMIC", "Cosmic", 20000),
+                                Triple("FANTASY", "Fantasy", 30000)
                             )
 
                             items(themes.size) { index ->
@@ -1805,24 +1901,24 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(if (isActive) Color.White.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                                        .background(if (isActive) palette.surfaceContainer.copy(alpha = 0.6f) else palette.surfaceContainer, RoundedCornerShape(16.dp))
                                         .border(
                                             width = if (isActive) 2.dp else 1.dp,
-                                            color = if (isActive) Color(0xFF82A6F1) else Color.White.copy(alpha = 0.6f),
+                                            color = if (isActive) palette.buttonAccent else Color.White.copy(alpha = 0.4f),
                                             shape = RoundedCornerShape(16.dp)
                                         )
                                         .padding(16.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(theme.second, color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Text(theme.second, color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                     if (isActive) {
-                                        Text("Equipped", color = Color(0xFF82A6F1), fontWeight = FontWeight.ExtraBold)
+                                        Text("Equipped", color = palette.buttonAccent, fontWeight = FontWeight.ExtraBold)
                                     } else if (isUnlocked) {
                                         Button(
                                             onClick = { viewModel.setTheme(themeId) },
                                             shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF82A6F1), contentColor = Color(0xFF1E293B))
+                                            colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
                                         ) { Text("Equip", fontWeight = FontWeight.ExtraBold) }
                                     } else {
                                         Button(
@@ -1832,8 +1928,8 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = Color(0xFFFBBF24),
                                                 contentColor = Color(0xFF1E293B),
-                                                disabledContainerColor = Color.White.copy(alpha = 0.4f),
-                                                disabledContentColor = Color(0xFF1E293B).copy(alpha = 0.5f)
+                                                disabledContainerColor = palette.surfaceContainer,
+                                                disabledContentColor = palette.textPrimary.copy(alpha = 0.5f)
                                             )
                                         ) {
                                             Text("${theme.third} Coins", fontWeight = FontWeight.ExtraBold)
@@ -1848,23 +1944,23 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             modifier = Modifier.fillMaxSize().padding(32.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            Text("Settings", color = Color(0xFF1E293B), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("Settings", color = palette.textPrimary, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
 
-                            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Sound", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth().background(palette.surfaceContainer, RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Sound", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
                                     checked = appState.soundEnabled,
                                     onCheckedChange = { viewModel.toggleSound() },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF82A6F1), checkedTrackColor = Color(0xFF82A6F1).copy(alpha=0.5f))
+                                    colors = SwitchDefaults.colors(checkedThumbColor = palette.buttonAccent, checkedTrackColor = palette.buttonAccent.copy(alpha=0.5f))
                                 )
                             }
 
-                            Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Haptic Feedback", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Row(modifier = Modifier.fillMaxWidth().background(palette.surfaceContainer, RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Haptic Feedback", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
                                     checked = appState.hapticEnabled,
                                     onCheckedChange = { viewModel.toggleHaptics() },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF82A6F1), checkedTrackColor = Color(0xFF82A6F1).copy(alpha=0.5f))
+                                    colors = SwitchDefaults.colors(checkedThumbColor = palette.buttonAccent, checkedTrackColor = palette.buttonAccent.copy(alpha=0.5f))
                                 )
                             }
                         }
@@ -1879,7 +1975,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                     .padding(horizontal = 32.dp, vertical = 12.dp)
                     .fillMaxWidth()
                     .shadow(16.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.1f))
-                    .background(Color.White.copy(alpha = 0.8f), CircleShape)
+                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
                     .border(1.dp, Color.White, CircleShape)
                     .padding(vertical = 8.dp, horizontal = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1900,6 +1996,5 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                 AdmobBanner(appState.adsRemoved)
             }
         }
-
     }
 }
