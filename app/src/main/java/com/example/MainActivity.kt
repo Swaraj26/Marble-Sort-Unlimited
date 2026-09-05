@@ -101,11 +101,6 @@ class AdManager(private val context: Context) {
     var rewardedAd: RewardedAd? = null
     var interstitialAd: InterstitialAd? = null
 
-    init {
-        loadRewardedAd()
-        loadInterstitialAd()
-    }
-
     fun loadRewardedAd() {
         val adRequest = AdRequest.Builder().build()
         RewardedAd.load(context, "ca-app-pub-2587866419282101/3154625375", adRequest, object : RewardedAdLoadCallback() {
@@ -206,18 +201,22 @@ fun AdmobBanner(adsRemoved: Boolean) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val adManager = try { AdManager(this) } catch (e: Exception) { null }
+        val billingManager = try { BillingManager(this) } catch (e: Exception) { null }
         try {
-            MobileAds.initialize(this) {}
+            MobileAds.initialize(this) {
+                adManager?.loadRewardedAd()
+                adManager?.loadInterstitialAd()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        val adManager = try { AdManager(this) } catch (e: Exception) { null }
-        val billingManager = try { BillingManager(this) } catch (e: Exception) { null }
+
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
                 CompositionLocalProvider(
-                    LocalAdManager provides (adManager ?: AdManager(this)), // fallback just for typing, though usually won't crash
+                    LocalAdManager provides (adManager ?: AdManager(this)),
                     LocalBillingManager provides (billingManager ?: BillingManager(this))
                 ) {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -299,7 +298,7 @@ class SoundManager(context: Context) {
             .setMaxStreams(3)
             .setAudioAttributes(audioAttributes)
             .build()
-            
+
         try {
             selectSoundId = soundPool.load(context, R.raw.select, 1)
             moveSoundId = soundPool.load(context, R.raw.move, 1)
@@ -372,12 +371,12 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         AppDatabase::class.java, "ballsort-database"
     ).fallbackToDestructiveMigration().build()
     private val appStateDao = db.appStateDao()
-    
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val entity = appStateDao.getAppStateOnce()
             if (entity != null) {
-                _appState.update { 
+                _appState.update {
                     it.copy(
                         coins = entity.coins,
                         lives = entity.lives,
@@ -392,19 +391,19 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
             }
-            
+
             withContext(Dispatchers.Main) {
                 checkDailyBonus()
                 startLevel(_appState.value.highestUnlockedLevel, changeScreen = false)
             }
-            
+
             kotlinx.coroutines.GlobalScope.launch(Dispatchers.Main) {
                 while (true) {
                     checkLifeRegen()
                     kotlinx.coroutines.delay(1000)
                 }
             }
-            
+
             _appState.collect { state ->
                 appStateDao.saveAppState(
                     AppStateEntity(
@@ -431,20 +430,20 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             val timePassed = now - state.nextLifeTime
             val livesGained = 1 + (timePassed / (30 * 60 * 1000L)).toInt()
             val finalLives = (state.lives + livesGained).coerceAtMost(5)
-            
+
             val newNextLifeTime = if (finalLives < 5) {
                 state.nextLifeTime + livesGained * 30 * 60 * 1000L
             } else {
                 0L
             }
-            
+
             _appState.update { it.copy(lives = finalLives, nextLifeTime = newNextLifeTime) }
         } else if (state.lives < 5 && state.nextLifeTime == 0L) {
             // Fallback just in case
             _appState.update { it.copy(nextLifeTime = now + 30 * 60 * 1000L) }
         }
     }
-    
+
     private fun consumeLife() {
         val state = _appState.value
         if (state.lives <= 0) return
@@ -462,7 +461,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
     fun claimDailyBonus() {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        _appState.update { 
+        _appState.update {
             it.copy(
                 coins = it.coins + 50,
                 lastClaimedDate = today,
@@ -470,7 +469,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             )
         }
     }
-    
+
     fun dismissDailyBonus() {
         // Option to just hide without claiming, but claiming is automatic upon click usually.
         _appState.update { it.copy(showDailyBonusDialog = false) }
@@ -481,11 +480,11 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         if (changeScreen) {
             _appState.update { it.copy(screen = Screen.GAME) }
         }
-        
+
         val isHardLevel = level % 5 == 0
         val baseColors = 2 + (level / 3) + if (isHardLevel) 1 else 0
         val numColors = kotlin.math.max(3, baseColors).coerceAtMost(GameColors.size)
-        
+
         val colorsToUse = GameColors.shuffled().take(numColors)
 
         val tubes = mutableListOf<Tube>()
@@ -540,7 +539,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                 history.add(currentTubes)
             }
         }
-        
+
         val dp = IntArray(history.size) { Int.MAX_VALUE }
         dp[history.lastIndex] = 0
         for (i in history.lastIndex downTo 0) {
@@ -554,7 +553,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
-        
+
         val minMoves = dp[0]
         val multiplier = if (isHardLevel) 1.3 else 1.5
         val maxMovesAllowed = kotlin.math.max(1, kotlin.math.ceil(minMoves * multiplier).toInt())
@@ -590,13 +589,13 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         val dstBallsA = stateA[dst].balls
         if (srcBallsA.isEmpty()) return false
         if (dstBallsA.size >= 4) return false
-        
+
         val ballToMove = srcBallsA.last()
         if (dstBallsA.isNotEmpty() && dstBallsA.last().color != ballToMove.color) return false
-        
+
         val expectedSrcB = srcBallsA.dropLast(1)
         val expectedDstB = dstBallsA + ballToMove
-        
+
         return stateB[src].balls == expectedSrcB && stateB[dst].balls == expectedDstB
     }
 
@@ -629,7 +628,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                     newTubes[index] = destTube.copy(balls = dBalls)
 
                     val moveAction = MoveAction(selected, index)
-                    
+
                     _soundEvents.tryEmit(SoundEvent.MOVE)
 
                     _uiState.update {
@@ -690,7 +689,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
         newTubes[lastMove.toTube] = newTubes[lastMove.toTube].copy(balls = sBalls)
         newTubes[lastMove.fromTube] = newTubes[lastMove.fromTube].copy(balls = dBalls)
-        
+
         _soundEvents.tryEmit(SoundEvent.MOVE)
 
         _uiState.update {
@@ -706,7 +705,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
     fun buyTheme(themeId: String, cost: Int) {
         if (_appState.value.coins >= cost && !_appState.value.unlockedThemes.contains(themeId)) {
-            _appState.update { 
+            _appState.update {
                 it.copy(
                     coins = it.coins - cost,
                     unlockedThemes = it.unlockedThemes + themeId
@@ -720,11 +719,11 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             _appState.update { it.copy(activeTheme = themeId) }
         }
     }
-    
+
     fun addCoins(amount: Int) {
         _appState.update { it.copy(coins = it.coins + amount) }
     }
-    
+
     fun removeAds() {
         _appState.update { it.copy(adsRemoved = true) }
     }
@@ -795,7 +794,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     fun navigate(screen: Screen) {
         _appState.update { it.copy(screen = screen) }
     }
-    
+
     fun toggleSound() { _appState.update { it.copy(soundEnabled = !it.soundEnabled) } }
     fun toggleHaptics() { _appState.update { it.copy(hapticEnabled = !it.hapticEnabled) } }
 }
@@ -824,11 +823,11 @@ fun MarbleSortScreen(
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val soundManager = remember { SoundManager(context) }
-    
+
     DisposableEffect(Unit) {
         onDispose { soundManager.release() }
     }
-    
+
     val view = androidx.compose.ui.platform.LocalView.current
     LaunchedEffect(viewModel) {
         viewModel.soundEvents.collect { event ->
@@ -864,7 +863,7 @@ fun MarbleSortScreen(
             }
         }
     }
-    
+
     var showPowerUpDialog by remember { mutableStateOf(PowerUpType.NONE) }
     var showGiveUpDialog by remember { mutableStateOf(false) }
     val adManager = LocalAdManager.current
@@ -948,8 +947,8 @@ fun MarbleSortScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showGiveUpDialog = false }) { 
-                    Text("Cancel", color = Color(0xFF475569), fontWeight = FontWeight.Bold) 
+                TextButton(onClick = { showGiveUpDialog = false }) {
+                    Text("Cancel", color = Color(0xFF475569), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -1001,7 +1000,7 @@ fun MarbleSortScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     var timerText by remember { mutableStateOf(if (appState.lives >= 5) "MAX" else "") }
-                    
+
                     LaunchedEffect(appState.lives, appState.nextLifeTime) {
                         if (appState.lives >= 5) {
                             timerText = "MAX"
@@ -1045,7 +1044,7 @@ fun MarbleSortScreen(
                 activeTheme = appState.activeTheme,
                 onTubeSelect = { viewModel.selectTube(it) }
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // Footer - Power Ups
@@ -1072,7 +1071,7 @@ fun MarbleSortScreen(
                         Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
-                
+
                 // Undo Power Up
                 val isUndoEnabled = state.undoStack.isNotEmpty() && !state.isWon && !state.isLost
                 IconButton(
@@ -1089,7 +1088,7 @@ fun MarbleSortScreen(
                         Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else Color(0xFF1E293B).copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                     }
                 }
-                
+
                 // Restart / Give Up
                 IconButton(
                     onClick = { showGiveUpDialog = true },
@@ -1105,7 +1104,7 @@ fun MarbleSortScreen(
                     }
                 }
             }
-            
+
             // Bottom Indicator line
             Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.width(128.dp).height(4.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(50)))
@@ -1115,7 +1114,10 @@ fun MarbleSortScreen(
         // Win Overlay
         // Game Banner Ad
         Box(
-            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             AdmobBanner(appState.adsRemoved)
         }
@@ -1263,31 +1265,31 @@ fun TubeGrid(
     ) {
         val screenWidth = maxWidth.value
         val screenHeight = maxHeight.value
-        
-        // Dynamically compute columns based on screen width. 
+
+        // Dynamically compute columns based on screen width.
         val columns = maxOf(4, (screenWidth / 75).toInt()).coerceAtMost(8)
         val chunks = tubes.chunked(columns)
-        
+
         // Calculate required rows
         val rows = chunks.size
-        
+
         // Base dimensions for a tube + vertical spacing
         val baseTubeHeight = 176f + 48f // Tube height + spacing
-        
+
         // We calculate a width-based scale and a height-based scale, and pick the smaller one to fit!
         val widthScale = (screenWidth / 360f)
         val heightScale = if (rows > 0) (screenHeight / (baseTubeHeight * rows)) * 0.95f else 1f
-        
+
         // Final scale factor ensures it fits vertically and horizontally
         val scaleFactor = minOf(widthScale, heightScale).coerceIn(0.4f, 2.0f)
-        
+
         val tubeWidth = (48 * scaleFactor).dp
         val tubeHeight = (176 * scaleFactor).dp
         val ballSize = (36 * scaleFactor).dp
         val ballSpacing = (38 * scaleFactor).dp
         val liftOffset = (48 * scaleFactor).dp
         val bottomPadding = (6 * scaleFactor).dp
-        
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy((48 * scaleFactor).dp)
@@ -1333,7 +1335,7 @@ fun TubeView(
 ) {
     val borderColor = if (isSelected) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.2f)
     val ringColor = if (isSelected) Color(0xFF6366F1).copy(alpha = 0.3f) else Color.Transparent
-    
+
     val totalHeight = tubeHeight + liftOffset
 
     Box(
@@ -1414,7 +1416,7 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifi
     val isLiftingBorder = if (isSelectedLifting) Color.White.copy(alpha = 0.5f) else Color.Transparent
     Canvas(modifier = modifier) {
         val radius = size.width / 2f
-        
+
         if (activeTheme == "NEON") {
             // Neon Theme
             drawCircle(color = Color.Black)
@@ -1437,7 +1439,7 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifi
             )
         } else {
             // CLASSIC / GLOSSY Theme
-            
+
             // Base shadow
             drawCircle(
                 color = Color.Black.copy(alpha = 0.15f),
@@ -1452,7 +1454,7 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, modifi
                 radius = radius
             )
             drawCircle(brush = radial)
-            
+
             // Rim light bottom
             val bottomRim = Brush.verticalGradient(
                 colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f)),
@@ -1488,7 +1490,7 @@ fun AppNavHost(modifier: Modifier = Modifier, viewModel: BallSortViewModel = vie
     val appState by viewModel.appState.collectAsState()
     val billingManager = LocalBillingManager.current
     val restoredPurchases by billingManager.restoredPurchases.collectAsState()
-    
+
     LaunchedEffect(restoredPurchases) {
         if (restoredPurchases.contains("remove_ads") && !appState.adsRemoved) {
             viewModel.removeAds()
@@ -1570,7 +1572,7 @@ fun TabItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
 @Composable
 fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
     val appState by viewModel.appState.collectAsState()
-    
+
     if (appState.showDailyBonusDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDailyBonus() },
@@ -1609,7 +1611,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(modifier = Modifier.fillMaxWidth().padding(24.dp).zIndex(1f), horizontalArrangement = Arrangement.SpaceBetween) {
                 var timerText by remember { mutableStateOf(if (appState.lives >= 5) "MAX" else "") }
-                
+
                 LaunchedEffect(appState.lives, appState.nextLifeTime) {
                     if (appState.lives >= 5) {
                         timerText = "MAX"
@@ -1627,7 +1629,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                         }
                     }
                 }
-            
+
                 StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, isLarge = true)
                 StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", isLarge = true)
             }
@@ -1639,11 +1641,11 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             val targetIndex = kotlin.math.max(0, appState.highestUnlockedLevel - 1)
                             val startIndex = kotlin.math.max(0, targetIndex - 1)
                             val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = startIndex)
-                            
+
                             androidx.compose.runtime.LaunchedEffect(targetIndex) {
                                 listState.animateScrollToItem(targetIndex)
                             }
-    
+
                             LazyColumn(
                                 state = listState,
                                 userScrollEnabled = false,
@@ -1663,7 +1665,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                     )
                                 }
                             }
-                            
+
                             // Play Button positioned inside the content area (above ads and tabs)
                             Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 24.dp)) {
                                 Button(
@@ -1692,7 +1694,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                         val billingManager = LocalBillingManager.current
                         val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                         val productDetails by billingManager.productDetails.collectAsState()
-                        
+
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -1702,20 +1704,20 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Text("Buy Coins", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
-                            
+
                             val coinPacks = listOf(
                                 Pair(1000, "coin_pack_1000"),
                                 Pair(5000, "coin_pack_5000"),
                                 Pair(12000, "coin_pack_12000")
                             )
-                            
+
                             items(coinPacks.size) { index ->
                                 val pack = coinPacks[index]
                                 val amount = pack.first
                                 val productDetail = productDetails[pack.second]
                                 val defaultPrice = if (amount == 1000) "$0.99" else if (amount == 5000) "$3.99" else "$7.99"
                                 val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: defaultPrice
-                                
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1742,16 +1744,16 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                     }
                                 }
                             }
-                            
+
                             if (!appState.adsRemoved) {
                                 item {
                                     Spacer(modifier = Modifier.height(32.dp))
                                     Text("Premium", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    
+
                                     val productDetail = productDetails["remove_ads"]
                                     val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: "$9.99"
-                                    
+
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -1785,7 +1787,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Text("Themes", color = Color(0xFF1E293B), fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
-                            
+
                             val themes = listOf(
                                 Triple("CLASSIC", "Classic", 0),
                                 Triple("NEON", "Neon Glow", 5000),
@@ -1793,13 +1795,13 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Triple("COSMIC", "Cosmic", 25000),
                                 Triple("FANTASY", "Fantasy", 50000)
                             )
-                            
+
                             items(themes.size) { index ->
                                 val theme = themes[index]
                                 val themeId = theme.first
                                 val isUnlocked = appState.unlockedThemes.contains(themeId)
                                 val isActive = appState.activeTheme == themeId
-                                
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1847,7 +1849,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
                             Text("Settings", color = Color(0xFF1E293B), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
-                            
+
                             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Sound", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
@@ -1856,7 +1858,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF82A6F1), checkedTrackColor = Color(0xFF82A6F1).copy(alpha=0.5f))
                                 )
                             }
-                            
+
                             Row(modifier = Modifier.fillMaxWidth().background(Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Haptic Feedback", color = Color(0xFF1E293B), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Switch(
@@ -1870,7 +1872,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                     else -> {}
                 }
             }
-            
+
             // Bottom Tabs Island
             Row(
                 modifier = Modifier
@@ -1887,9 +1889,14 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                 TabItem(Icons.Default.Home, "Home", screen == Screen.HOME) { viewModel.navigate(Screen.HOME) }
                 TabItem(Icons.Default.Settings, "Settings", screen == Screen.SETTINGS) { viewModel.navigate(Screen.SETTINGS) }
             }
-            
+
             // Banner Ad at the very bottom
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars),
+                contentAlignment = Alignment.Center
+            ) {
                 AdmobBanner(appState.adsRemoved)
             }
         }
