@@ -1,6 +1,5 @@
 package com.example
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
@@ -239,7 +238,10 @@ val LocalBillingManager = compositionLocalOf<BillingManager> { error("No Billing
 fun AdmobBanner(adsRemoved: Boolean) {
     if (adsRemoved) return
     Box(
-        modifier = Modifier.fillMaxWidth().background(Color.Black),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Black)
+            .windowInsetsPadding(WindowInsets.navigationBars),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
@@ -318,7 +320,8 @@ data class GameState(
     val isLost: Boolean = false,
     val undoStack: List<MoveAction> = emptyList(),
     val level: Int = 1,
-    val earnedCoins: Int = 0
+    val earnedCoins: Int = 0,
+    val isBlindMode: Boolean = false
 ) {
     val movesLeft: Int get() = kotlin.math.max(0, maxMoves - moveCount)
 }
@@ -387,7 +390,6 @@ class SoundManager(context: Context) {
     }
 }
 
-
 @Entity(tableName = "app_state")
 data class AppStateEntity(
     @PrimaryKey val id: Int = 1,
@@ -426,7 +428,6 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
     private val _soundEvents = MutableSharedFlow<SoundEvent>(extraBufferCapacity = 10)
     val soundEvents = _soundEvents.asSharedFlow()
-
 
     private val db = Room.databaseBuilder(
         application,
@@ -501,7 +502,6 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
             _appState.update { it.copy(lives = finalLives, nextLifeTime = newNextLifeTime) }
         } else if (state.lives < 5 && state.nextLifeTime == 0L) {
-            // Fallback just in case
             _appState.update { it.copy(nextLifeTime = now + 30 * 60 * 1000L) }
         }
     }
@@ -543,7 +543,9 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         }
 
         val isHardLevel = level % 5 == 0
-        val baseColors = 2 + (level / 3) + if (isHardLevel) 1 else 0
+        val isBlindLevel = isHardLevel && level >= 10
+
+        val baseColors = 3 + (level / 8)
         val numColors = kotlin.math.max(3, baseColors).coerceAtMost(GameColors.size)
 
         val colorsToUse = GameColors.shuffled().take(numColors)
@@ -554,11 +556,14 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             val balls = List(4) { Ball(id = "ball_${ballIdCounter++}", color = colorsToUse[i]) }
             tubes.add(Tube(id = i, balls = balls))
         }
-        tubes.add(Tube(id = numColors, balls = emptyList()))
-        tubes.add(Tube(id = numColors + 1, balls = emptyList()))
+
+        val emptyTubesCount = if (isHardLevel) 1 else 2
+        for (i in 0 until emptyTubesCount) {
+            tubes.add(Tube(id = numColors + i, balls = emptyList()))
+        }
 
         var currentTubes = tubes.toList()
-        val numShuffles = (20 + (level * 5)) + if (isHardLevel) 50 else 0
+        val numShuffles = (30 + (level * 5)) + if (isHardLevel) 50 else 0
         var lastMove: Pair<Int, Int>? = null
 
         val history = mutableListOf<List<Tube>>()
@@ -616,13 +621,15 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         }
 
         val minMoves = dp[0]
-        val multiplier = if (isHardLevel) 1.3 else 1.5
+        val multiplier = if (isHardLevel) 1.15 else 1.35
         val maxMovesAllowed = kotlin.math.max(1, kotlin.math.ceil(minMoves * multiplier).toInt())
 
         _uiState.value = GameState(
             tubes = currentTubes,
             level = level,
-            maxMoves = maxMovesAllowed
+            maxMoves = maxMovesAllowed,
+            isBlindMode = isBlindLevel,
+            earnedCoins = 0
         )
     }
 
@@ -721,14 +728,12 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             tube.balls.isEmpty() || (tube.balls.size == tube.maxCapacity && tube.balls.all { it.color == tube.balls.first().color })
         }
         if (won && !state.isWon) {
-            val rewardAmount = 25 // Set your dynamic or constant reward here
-
+            val rewardAmount = 25
             _soundEvents.tryEmit(SoundEvent.WIN)
-            // Pass the reward to the UI state
             _uiState.update { it.copy(isWon = true, selectedTubeIndex = null, earnedCoins = rewardAmount) }
             _appState.update {
                 it.copy(
-                    coins = it.coins + rewardAmount, // Add the variable to the wallet
+                    coins = it.coins + rewardAmount,
                     highestUnlockedLevel = max(it.highestUnlockedLevel, state.level + 1)
                 )
             }
@@ -879,7 +884,6 @@ fun RowScope.StatBox(label: String, value: String, palette: ThemePalette) {
     }
 }
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun MarbleSortScreen(
     modifier: Modifier = Modifier,
@@ -934,6 +938,8 @@ fun MarbleSortScreen(
     var showPowerUpDialog by remember { mutableStateOf(PowerUpType.NONE) }
     var showGiveUpDialog by remember { mutableStateOf(false) }
     val adManager = LocalAdManager.current
+
+    @Suppress("ContextCastToActivity")
     val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
 
     if (showPowerUpDialog != PowerUpType.NONE) {
@@ -1099,6 +1105,7 @@ fun MarbleSortScreen(
                 selectedTubeIndex = state.selectedTubeIndex,
                 activeTheme = appState.activeTheme,
                 palette = palette,
+                isBlindMode = state.isBlindMode,
                 onTubeSelect = { viewModel.selectTube(it) }
             )
 
@@ -1168,13 +1175,11 @@ fun MarbleSortScreen(
             }
         }
 
-        // Win Overlay
         // Game Banner Ad
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             AdmobBanner(appState.adsRemoved)
         }
@@ -1225,8 +1230,6 @@ fun MarbleSortScreen(
                             ) {
                                 Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
                             }
-                            val adManager = LocalAdManager.current
-                            val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                             Button(
                                 onClick = {
                                     val levelsCompleted = viewModel.appState.value.highestUnlockedLevel - 1
@@ -1282,8 +1285,6 @@ fun MarbleSortScreen(
                             ) {
                                 Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
                             }
-                            val adManager = LocalAdManager.current
-                            val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
                             Button(
                                 onClick = {
                                     adManager.showRewardedAd(activity) {
@@ -1313,6 +1314,7 @@ fun TubeGrid(
     selectedTubeIndex: Int?,
     activeTheme: String,
     palette: ThemePalette,
+    isBlindMode: Boolean,
     onTubeSelect: (Int) -> Unit
 ) {
     BoxWithConstraints(
@@ -1332,14 +1334,14 @@ fun TubeGrid(
         val rows = chunks.size
 
         // Base dimensions for a tube + vertical spacing
-        val baseTubeHeight = 176f + 48f // Tube height + spacing
+        val baseTubeHeight = 176f + 48f
 
         // We calculate a width-based scale and a height-based scale, and pick the smaller one to fit!
         val widthScale = (screenWidth / 360f)
         val heightScale = if (rows > 0) (screenHeight / (baseTubeHeight * rows)) * 0.95f else 1f
 
-        // Final scale factor ensures it fits vertically and horizontally
-        val scaleFactor = minOf(widthScale, heightScale).coerceIn(0.4f, 2.0f)
+        // Final scale factor ensures it fits vertically and horizontally but limits shrinking
+        val scaleFactor = minOf(widthScale, heightScale).coerceIn(0.6f, 1.3f)
 
         val tubeWidth = (48 * scaleFactor).dp
         val tubeHeight = (176 * scaleFactor).dp
@@ -1364,6 +1366,7 @@ fun TubeGrid(
                             isSelected = selectedTubeIndex == index,
                             activeTheme = activeTheme,
                             palette = palette,
+                            isBlindMode = isBlindMode,
                             tubeWidth = tubeWidth,
                             tubeHeight = tubeHeight,
                             ballSize = ballSize,
@@ -1385,6 +1388,7 @@ fun TubeView(
     isSelected: Boolean,
     activeTheme: String,
     palette: ThemePalette,
+    isBlindMode: Boolean,
     tubeWidth: androidx.compose.ui.unit.Dp = 48.dp,
     tubeHeight: androidx.compose.ui.unit.Dp = 176.dp,
     ballSize: androidx.compose.ui.unit.Dp = 36.dp,
@@ -1450,6 +1454,8 @@ fun TubeView(
         tube.balls.forEachIndexed { index, ball ->
             val isTop = index == tube.balls.size - 1
             val isLifting = isSelected && isTop
+            val isHidden = isBlindMode && index < 2 && !isTop
+
             val targetY = -(index * ballSpacing.value + bottomPadding.value).dp - if (isLifting) liftOffset else 0.dp
             val yOffset by animateDpAsState(
                 targetValue = targetY,
@@ -1462,6 +1468,7 @@ fun TubeView(
                 isSelectedLifting = isLifting,
                 activeTheme = activeTheme,
                 palette = palette,
+                isHidden = isHidden,
                 modifier = Modifier
                     .offset(y = yOffset)
                     .size(ballSize)
@@ -1471,13 +1478,70 @@ fun TubeView(
 }
 
 @Composable
-fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palette: ThemePalette, modifier: Modifier = Modifier) {
+fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palette: ThemePalette, isHidden: Boolean, modifier: Modifier = Modifier) {
     val isLiftingBorder = if (isSelectedLifting) palette.selectionGlowColor.copy(alpha = 0.8f) else Color.Transparent
     Canvas(modifier = modifier) {
         val radius = size.width / 2f
 
+        if (isHidden) {
+            when (activeTheme) {
+                "NEON" -> {
+                    // Dark core with a faint neon wireframe lock outline
+                    drawCircle(color = Color(0xFF0F172A))
+                    drawCircle(
+                        color = palette.tubeBorderColor.copy(alpha = 0.4f),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.4f),
+                        radius = radius * 0.25f,
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
+                "COSMIC" -> {
+                    // Dark unlit moon / celestial eclipse sphere
+                    drawCircle(color = Color(0xFF090D16))
+                    drawCircle(
+                        color = Color(0xFF38BDF8).copy(alpha = 0.25f),
+                        radius = radius,
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                    // Crescent shadow rim
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.2f),
+                        radius = radius * 0.85f,
+                        center = Offset(radius * 0.8f, radius * 0.8f)
+                    )
+                }
+                "FANTASY" -> {
+                    // Raw uncut obsidian stone
+                    val path = Path().apply {
+                        moveTo(radius, 0f)
+                        lineTo(size.width, radius)
+                        lineTo(radius, size.height)
+                        lineTo(0f, radius)
+                        close()
+                    }
+                    drawPath(path, Color(0xFF1F1D2B))
+                    drawPath(path, palette.buttonAccent.copy(alpha = 0.3f), style = Stroke(width = 1.5.dp.toPx()))
+                }
+                else -> {
+                    // Classic / Pastel: Matte mystery sphere
+                    drawCircle(color = Color(0xFF334155))
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.25f),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.5f),
+                        radius = radius * 0.2f
+                    )
+                }
+            }
+            return@Canvas
+        }
+
         if (activeTheme == "NEON") {
-            // Neon Theme
             drawCircle(color = Color.Black)
             drawCircle(
                 color = ball.color,
@@ -1488,7 +1552,6 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 style = Stroke(width = 12.dp.toPx())
             )
         } else if (activeTheme == "PASTEL") {
-            // Pastel Theme
             val pastelColor = ball.color.copy(alpha = 0.8f)
             drawCircle(color = pastelColor)
             drawCircle(
@@ -1497,15 +1560,12 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 center = Offset(size.width * 0.3f, size.height * 0.3f)
             )
         } else if (activeTheme == "COSMIC") {
-            // Cosmic Theme
             drawCircle(color = ball.color)
-            // 3D Shadow rendering
             drawCircle(
                 color = Color.Black.copy(alpha = 0.5f),
                 radius = radius,
                 center = Offset(radius * 1.3f, radius * 1.3f)
             )
-            // Orbital ring
             drawArc(
                 color = Color.White.copy(alpha = 0.5f),
                 startAngle = -20f,
@@ -1515,23 +1575,20 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 size = Size(size.width * 1.4f, size.height * 0.4f),
                 style = Stroke(width = 2.dp.toPx())
             )
-            // Starlight points
             drawCircle(color = Color.White, radius = 2f, center = Offset(radius * 0.4f, radius * 0.5f))
             drawCircle(color = Color.White, radius = 1.5f, center = Offset(radius * 1.5f, radius * 0.3f))
 
         } else if (activeTheme == "FANTASY") {
-            // Fantasy Crystal Theme
             val path = Path().apply {
-                moveTo(radius, 0f) // top point
-                lineTo(size.width, radius) // right point
-                lineTo(radius, size.height) // bottom point
-                lineTo(0f, radius) // left point
+                moveTo(radius, 0f)
+                lineTo(size.width, radius)
+                lineTo(radius, size.height)
+                lineTo(0f, radius)
                 close()
             }
             drawPath(path, ball.color)
             drawPath(path, Color.White.copy(alpha = 0.3f), style = Stroke(width = 2.dp.toPx()))
 
-            // Star sparkle highlight
             val sparkle = Path().apply {
                 moveTo(radius, radius * 0.2f)
                 quadraticBezierTo(radius, radius, radius * 1.8f, radius)
@@ -1543,16 +1600,11 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
             drawPath(sparkle, Color.White.copy(alpha = 0.8f))
 
         } else {
-            // CLASSIC / GLOSSY Theme
-
-            // Base shadow
             drawCircle(
                 color = Color.Black.copy(alpha = 0.15f),
                 radius = radius,
                 center = Offset(radius, radius + 2.dp.toPx())
             )
-
-            // Base color with radial gradient
             val radial = Brush.radialGradient(
                 colors = listOf(ball.color.copy(alpha = 0.5f), ball.color.copy(alpha = 0.95f), ball.color.copy(alpha = 0.7f)),
                 center = Offset(radius, radius),
@@ -1560,7 +1612,6 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
             )
             drawCircle(brush = radial)
 
-            // Rim light bottom
             val bottomRim = Brush.verticalGradient(
                 colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f)),
                 startY = radius,
@@ -1568,7 +1619,6 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
             )
             drawCircle(brush = bottomRim, style = Stroke(width = 1.dp.toPx()))
 
-            // Specular highlight top
             drawCircle(
                 color = Color.White.copy(alpha = 0.5f),
                 radius = radius * 0.4f,
@@ -1634,11 +1684,11 @@ fun StatPill(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color,
 fun LevelNode(level: Int, isCompleted: Boolean, isCurrent: Boolean, isLocked: Boolean, palette: ThemePalette, isHardLevel: Boolean = false) {
     val size = if (isCurrent) 90.dp else 70.dp
     val color = if (isCompleted) {
-        palette.buttonAccent.copy(alpha = 0.8f) // completed
+        palette.buttonAccent.copy(alpha = 0.8f)
     } else if (isCurrent) {
-        palette.buttonAccent // current
+        palette.buttonAccent
     } else {
-        palette.surfaceContainer // locked - glass
+        palette.surfaceContainer
     }
     val contentColor = if (isLocked) palette.textPrimary.copy(alpha = 0.5f) else Color.White
 
@@ -1674,7 +1724,6 @@ fun TabItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
     }
 }
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
     val appState by viewModel.appState.collectAsState()
@@ -1764,7 +1813,6 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 }
                             }
 
-                            // Play Button positioned inside the content area (above ads and tabs)
                             Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 24.dp)) {
                                 Button(
                                     onClick = { if (appState.lives > 0) viewModel.startLevel(appState.highestUnlockedLevel) },
@@ -1787,8 +1835,9 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                         }
                     }
                     Screen.SHOP -> {
-                        val billingManager = LocalBillingManager.current
+                        @Suppress("ContextCastToActivity")
                         val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
+                        val billingManager = LocalBillingManager.current
                         val productDetails by billingManager.productDetails.collectAsState()
 
                         LazyColumn(
@@ -1884,12 +1933,13 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
 
+                            // Change the numbers to 0 here if you want to test buying them for free
                             val themes = listOf(
                                 Triple("CLASSIC", "Classic", 0),
                                 Triple("NEON", "Neon Glow", 5000),
                                 Triple("PASTEL", "Pastel Dream", 10000),
-                                Triple("COSMIC", "Cosmic", 20000),
-                                Triple("FANTASY", "Fantasy", 30000)
+                                Triple("COSMIC", "Cosmic", 25000),
+                                Triple("FANTASY", "Fantasy", 50000)
                             )
 
                             items(themes.size) { index ->
@@ -1988,9 +2038,7 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
 
             // Banner Ad at the very bottom
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars),
+                modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 AdmobBanner(appState.adsRemoved)
