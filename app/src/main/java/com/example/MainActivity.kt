@@ -81,6 +81,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -543,7 +556,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         }
 
         val isHardLevel = level % 5 == 0
-        val isBlindLevel = isHardLevel && level >= 10
+        val isBlindLevel = isHardLevel && level >= 100
 
         val baseColors = 3 + (level / 8)
         val numColors = kotlin.math.max(3, baseColors).coerceAtMost(GameColors.size)
@@ -873,9 +886,9 @@ fun RowScope.StatBox(label: String, value: String, palette: ThemePalette) {
     Box(
         modifier = Modifier
             .weight(1f)
-            .background(palette.surfaceContainer, RoundedCornerShape(12.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-            .padding(8.dp)
+            .background(palette.surfaceContainer, RoundedCornerShape(10.dp)) // Tighter corners
+            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp) // Reduced vertical padding
     ) {
         Column {
             Text(label, fontSize = 8.sp, color = palette.textPrimary.copy(alpha = 0.8f), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
@@ -937,10 +950,32 @@ fun MarbleSortScreen(
 
     var showPowerUpDialog by remember { mutableStateOf(PowerUpType.NONE) }
     var showGiveUpDialog by remember { mutableStateOf(false) }
+    var showBlindModeIntro by remember(state.level) {
+        mutableStateOf(state.isBlindMode && state.level == 100)
+    }
     val adManager = LocalAdManager.current
 
     @Suppress("ContextCastToActivity")
     val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
+
+    if (showBlindModeIntro) {
+        AlertDialog(
+            onDismissRequest = { showBlindModeIntro = false },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF1E293B),
+            textContentColor = Color(0xFF1E293B),
+            title = { Text("⚠️ Blind Mode Activated!", fontWeight = FontWeight.ExtraBold) },
+            text = { Text("Welcome to the big leagues. From here on out, Boss levels will hide the bottom spheres in the tubes. They will only reveal themselves when they reach the top, or when you completely sort a tube. Good luck!", fontWeight = FontWeight.Medium) },
+            confirmButton = {
+                Button(
+                    onClick = { showBlindModeIntro = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent)
+                ) {
+                    Text("Got it!", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     if (showPowerUpDialog != PowerUpType.NONE) {
         val isUndo = showPowerUpDialog == PowerUpType.UNDO
@@ -1035,11 +1070,11 @@ fun MarbleSortScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Header
+            // Header - REDUCED PADDING
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 4.dp), // Tighter top/bottom
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1047,16 +1082,17 @@ fun MarbleSortScreen(
                     IconButton(
                         onClick = { viewModel.goHome() },
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(36.dp) // Smaller back button
                             .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF6B8CE0))
                             .background(palette.surfaceContainer, RoundedCornerShape(10.dp))
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Home", tint = palette.textPrimary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Home", tint = palette.textPrimary, modifier = Modifier.size(18.dp))
                     }
                     Text(
                         text = "Level ${state.level}",
                         color = palette.textPrimary,
                         style = MaterialTheme.typography.titleLarge,
+                        fontSize = 20.sp, // Slightly smaller text
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
@@ -1089,14 +1125,12 @@ fun MarbleSortScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp), // Tighter vertical padding
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatBox(label = "MOVES", value = state.moveCount.toString().padStart(3, '0'), palette = palette)
                 StatBox(label = "MOVES LEFT", value = state.movesLeft.toString().padStart(3, '0'), palette = palette)
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Grid
             TubeGrid(
@@ -1109,68 +1143,69 @@ fun MarbleSortScreen(
                 onTubeSelect = { viewModel.selectTube(it) }
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Footer - Power Ups
+            // Footer - RECTANGULAR Power Ups
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp)
-                    .padding(bottom = 90.dp), // Padding to keep above banner ad and nav bar
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = 76.dp), // Keeps it safely above the ad banner
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Add Tube Power Up
-                IconButton(
-                    onClick = { showPowerUpDialog = PowerUpType.ADD_TUBE },
+                Row(
                     modifier = Modifier
-                        .size(84.dp)
-                        .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF76DB9E))
-                        .background(if (!state.isWon && !state.isLost) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(24.dp)),
-                    enabled = !state.isWon && !state.isLost
+                        .weight(1f)
+                        .height(52.dp) // Rectangular height instead of 84.dp square
+                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF76DB9E))
+                        .background(if (!state.isWon && !state.isLost) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(16.dp))
+                        .clickable(enabled = !state.isWon && !state.isLost) { showPowerUpDialog = PowerUpType.ADD_TUBE },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Tube", tint = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    }
+                    Icon(Icons.Default.Add, contentDescription = "Add Tube", tint = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                 }
 
                 // Undo Power Up
                 val isUndoEnabled = state.undoStack.isNotEmpty() && !state.isWon && !state.isLost
-                IconButton(
-                    onClick = { showPowerUpDialog = PowerUpType.UNDO },
+                Row(
                     modifier = Modifier
-                        .size(84.dp)
-                        .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF6B8CE0))
-                        .background(if (isUndoEnabled) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(24.dp)),
-                    enabled = isUndoEnabled
+                        .weight(1f)
+                        .height(52.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF6B8CE0))
+                        .background(if (isUndoEnabled) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(16.dp))
+                        .clickable(enabled = isUndoEnabled) { showPowerUpDialog = PowerUpType.UNDO },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    }
+                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                 }
 
                 // Restart / Give Up
-                IconButton(
-                    onClick = { showGiveUpDialog = true },
+                Row(
                     modifier = Modifier
-                        .size(84.dp)
-                        .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFFE59C69))
-                        .background(Color(0xFFFCB682), RoundedCornerShape(24.dp))
+                        .weight(1f)
+                        .height(52.dp)
+                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFFE59C69))
+                        .background(Color(0xFFFCB682), RoundedCornerShape(16.dp))
+                        .clickable { showGiveUpDialog = true },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Restart", tint = Color(0xFF1E293B), modifier = Modifier.size(32.dp))
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text("Restart", color = Color(0xFF1E293B), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                    }
+                    Icon(Icons.Default.Refresh, contentDescription = "Restart", tint = Color(0xFF1E293B), modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Restart", color = Color(0xFF1E293B), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
                 }
             }
 
             // Bottom Indicator line
-            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
                 Box(modifier = Modifier.width(128.dp).height(4.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(50)))
             }
         }
@@ -1321,7 +1356,7 @@ fun TubeGrid(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopCenter
     ) {
         val screenWidth = maxWidth.value
         val screenHeight = maxHeight.value
@@ -1330,17 +1365,16 @@ fun TubeGrid(
         val columns = maxOf(4, (screenWidth / 75).toInt()).coerceAtMost(8)
         val chunks = tubes.chunked(columns)
 
-        // Calculate required rows
         val rows = chunks.size
-
-        // Base dimensions for a tube + vertical spacing
         val baseTubeHeight = 176f + 48f
 
-        // We calculate a width-based scale and a height-based scale, and pick the smaller one to fit!
         val widthScale = (screenWidth / 360f)
-        val heightScale = if (rows > 0) (screenHeight / (baseTubeHeight * rows)) * 0.95f else 1f
 
-        // Final scale factor ensures it fits vertically and horizontally but limits shrinking
+        // UPDATED: Calculate height based on a MAXIMUM of 2 rows.
+        // 1 or 2 rows will shrink to fit the screen. 3+ rows will use the 2-row size and scroll.
+        val visibleRows = minOf(rows, 2)
+        val heightScale = if (visibleRows > 0) (screenHeight / (baseTubeHeight * visibleRows)) * 0.95f else 1f
+
         val scaleFactor = minOf(widthScale, heightScale).coerceIn(0.6f, 1.3f)
 
         val tubeWidth = (48 * scaleFactor).dp
@@ -1350,32 +1384,97 @@ fun TubeGrid(
         val liftOffset = (48 * scaleFactor).dp
         val bottomPadding = (6 * scaleFactor).dp
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy((48 * scaleFactor).dp)
-        ) {
-            for (chunk in chunks) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    for (tube in chunk) {
-                        val index = tubes.indexOf(tube)
-                        TubeView(
-                            tube = tube,
-                            isSelected = selectedTubeIndex == index,
-                            activeTheme = activeTheme,
-                            palette = palette,
-                            isBlindMode = isBlindMode,
-                            tubeWidth = tubeWidth,
-                            tubeHeight = tubeHeight,
-                            ballSize = ballSize,
-                            ballSpacing = ballSpacing,
-                            liftOffset = liftOffset,
-                            bottomPadding = bottomPadding,
-                            onTubeClick = { onTubeSelect(index) }
-                        )
+        val scrollState = rememberScrollState()
+
+        // UPDATED: Auto-hide the scroll indicator
+        var showIndicator by remember(tubes.size) { mutableStateOf(true) }
+
+        LaunchedEffect(tubes.size) {
+            delay(4000) // Hide automatically after 4 seconds
+            showIndicator = false
+        }
+        LaunchedEffect(scrollState.value) {
+            if (scrollState.value > 10) { // Hide instantly if the user starts scrolling
+                showIndicator = false
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy((48 * scaleFactor).dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(bottom = 60.dp) // Extra padding so the last row isn't flush with the bottom
+            ) {
+                for (chunk in chunks) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        for (tube in chunk) {
+                            val index = tubes.indexOf(tube)
+                            TubeView(
+                                tube = tube,
+                                isSelected = selectedTubeIndex == index,
+                                activeTheme = activeTheme,
+                                palette = palette,
+                                isBlindMode = isBlindMode,
+                                tubeWidth = tubeWidth,
+                                tubeHeight = tubeHeight,
+                                ballSize = ballSize,
+                                ballSpacing = ballSpacing,
+                                liftOffset = liftOffset,
+                                bottomPadding = bottomPadding,
+                                onTubeClick = { onTubeSelect(index) }
+                            )
+                        }
                     }
+                }
+            }
+
+            // Floating, bouncing indicator that appears only if there is off-screen content
+            AnimatedVisibility(
+                visible = scrollState.canScrollForward && showIndicator,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                val infiniteTransition = rememberInfiniteTransition(label = "bounce")
+                val yOffset by infiniteTransition.animateFloat(
+                    initialValue = -8f,
+                    targetValue = 8f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(800, easing = EaseInOut),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "yOffset"
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .offset(y = yOffset.dp)
+                        .padding(bottom = 8.dp)
+                        .shadow(8.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.5f))
+                        .background(palette.surfaceContainer, CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Scroll for more",
+                        color = palette.textPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Scroll Down",
+                        tint = palette.textPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -1399,6 +1498,7 @@ fun TubeView(
 ) {
     val ringColor = if (isSelected) palette.selectionGlowColor else Color.Transparent
     val totalHeight = tubeHeight + liftOffset
+    val isSortedTube = tube.balls.size == tube.maxCapacity && tube.balls.all { it.color == tube.balls.first().color }
 
     Box(
         contentAlignment = Alignment.BottomCenter,
@@ -1454,7 +1554,7 @@ fun TubeView(
         tube.balls.forEachIndexed { index, ball ->
             val isTop = index == tube.balls.size - 1
             val isLifting = isSelected && isTop
-            val isHidden = isBlindMode && index < 2 && !isTop
+            val isHidden = isBlindMode && index < 2 && !isTop && !isSortedTube
 
             val targetY = -(index * ballSpacing.value + bottomPadding.value).dp - if (isLifting) liftOffset else 0.dp
             val yOffset by animateDpAsState(
