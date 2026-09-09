@@ -89,7 +89,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -131,8 +130,15 @@ fun getThemePalette(themeId: String): ThemePalette {
             surfaceContainer = Color.White.copy(alpha = 0.1f),
             buttonAccent = Color(0xFF00FFCC)
         )
+
         "PASTEL" -> ThemePalette(
-            backgroundBrush = Brush.linearGradient(listOf(Color(0xFFFDE8E9), Color(0xFFE3E7FA), Color(0xFFE6F4EA))),
+            backgroundBrush = Brush.linearGradient(
+                listOf(
+                    Color(0xFFFDE8E9),
+                    Color(0xFFE3E7FA),
+                    Color(0xFFE6F4EA)
+                )
+            ),
             tubeBorderColor = Color.White.copy(alpha = 0.8f),
             tubeGlassAlpha = 0.4f,
             selectionGlowColor = Color(0xFFFCA5A5),
@@ -140,6 +146,7 @@ fun getThemePalette(themeId: String): ThemePalette {
             surfaceContainer = Color.White.copy(alpha = 0.35f),
             buttonAccent = Color(0xFFFCA5A5)
         )
+
         "COSMIC" -> ThemePalette(
             backgroundBrush = Brush.radialGradient(listOf(Color(0xFF1E1B4B), Color(0xFF020617))),
             tubeBorderColor = Color(0xFF8B5CF6).copy(alpha = 0.6f),
@@ -149,8 +156,15 @@ fun getThemePalette(themeId: String): ThemePalette {
             surfaceContainer = Color.White.copy(alpha = 0.15f),
             buttonAccent = Color(0xFF38BDF8)
         )
+
         "FANTASY" -> ThemePalette(
-            backgroundBrush = Brush.linearGradient(listOf(Color(0xFF2E1065), Color(0xFF4C1D95), Color(0xFF1E1B4B))),
+            backgroundBrush = Brush.linearGradient(
+                listOf(
+                    Color(0xFF2E1065),
+                    Color(0xFF4C1D95),
+                    Color(0xFF1E1B4B)
+                )
+            ),
             tubeBorderColor = Color(0xFFFBBF24).copy(alpha = 0.6f),
             tubeGlassAlpha = 0.2f,
             selectionGlowColor = Color(0xFFFBBF24),
@@ -158,8 +172,15 @@ fun getThemePalette(themeId: String): ThemePalette {
             surfaceContainer = Color.White.copy(alpha = 0.15f),
             buttonAccent = Color(0xFFFBBF24)
         )
-        else -> ThemePalette( // CLASSIC
-            backgroundBrush = Brush.linearGradient(listOf(Color(0xFFFCD5CE), Color(0xFFD8E2DC), Color(0xFFB5E4CB))),
+
+        else -> ThemePalette(
+            backgroundBrush = Brush.linearGradient(
+                listOf(
+                    Color(0xFFFCD5CE),
+                    Color(0xFFD8E2DC),
+                    Color(0xFFB5E4CB)
+                )
+            ),
             tubeBorderColor = Color.White.copy(alpha = 0.5f),
             tubeGlassAlpha = 0.3f,
             selectionGlowColor = Color(0xFF6366F1).copy(alpha = 0.3f),
@@ -176,43 +197,52 @@ class AdManager(private val context: Context) {
 
     fun loadRewardedAd() {
         val adRequest = AdRequest.Builder().build()
-        RewardedAd.load(context, "ca-app-pub-2587866419282101/3154625375", adRequest, object : RewardedAdLoadCallback() {
-            override fun onAdFailedToLoad(adError: LoadAdError) {
-                rewardedAd = null
-            }
-            override fun onAdLoaded(ad: RewardedAd) {
-                rewardedAd = ad
-            }
-        })
+        RewardedAd.load(
+            context,
+            "ca-app-pub-2587866419282101/3154625375",
+            adRequest,
+            object : RewardedAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    rewardedAd = null
+                }
+
+                override fun onAdLoaded(ad: RewardedAd) {
+                    rewardedAd = ad
+                }
+            })
     }
 
     fun loadInterstitialAd() {
         val adRequest = AdRequest.Builder().build()
-        InterstitialAd.load(context, "ca-app-pub-2587866419282101/8217098999", adRequest, object : InterstitialAdLoadCallback() {
-            override fun onAdFailedToLoad(adError: LoadAdError) {
-                interstitialAd = null
-            }
-            override fun onAdLoaded(ad: InterstitialAd) {
-                interstitialAd = ad
-            }
-        })
+        InterstitialAd.load(
+            context,
+            "ca-app-pub-2587866419282101/8217098999",
+            adRequest,
+            object : InterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    interstitialAd = null
+                }
+
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    interstitialAd = ad
+                }
+            })
     }
 
     fun showRewardedAd(activity: Activity, onRewarded: () -> Unit) {
         if (rewardedAd != null) {
-            rewardedAd?.fullScreenContentCallback = object: FullScreenContentCallback() {
+            rewardedAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     rewardedAd = null
                     loadRewardedAd()
                 }
+
                 override fun onAdFailedToShowFullScreenContent(e: AdError) {
                     rewardedAd = null
                     onRewarded()
                 }
             }
-            rewardedAd?.show(activity) { _ ->
-                onRewarded()
-            }
+            rewardedAd?.show(activity) { _ -> onRewarded() }
         } else {
             onRewarded()
             loadRewardedAd()
@@ -225,12 +255,13 @@ class AdManager(private val context: Context) {
             return
         }
         if (interstitialAd != null) {
-            interstitialAd?.fullScreenContentCallback = object: FullScreenContentCallback() {
+            interstitialAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     interstitialAd = null
                     loadInterstitialAd()
                     onClosed()
                 }
+
                 override fun onAdFailedToShowFullScreenContent(e: AdError) {
                     interstitialAd = null
                     onClosed()
@@ -247,38 +278,19 @@ class AdManager(private val context: Context) {
 val LocalAdManager = compositionLocalOf<AdManager> { error("No AdManager provided") }
 val LocalBillingManager = compositionLocalOf<BillingManager> { error("No BillingManager provided") }
 
-@Composable
-fun AdmobBanner(adsRemoved: Boolean) {
-    if (adsRemoved) return
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.Black)
-            .windowInsetsPadding(WindowInsets.navigationBars),
-        contentAlignment = Alignment.Center
-    ) {
-        AndroidView(
-            modifier = Modifier.fillMaxWidth(),
-            factory = { context ->
-                AdView(context).apply {
-                    adUnitId = "ca-app-pub-2587866419282101/4852569054"
-                    setAdSize(AdSize.BANNER)
-                    try {
-                        loadAd(AdRequest.Builder().build())
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
-        )
-    }
-}
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val adManager = try { AdManager(this) } catch (e: Exception) { null }
-        val billingManager = try { BillingManager(this) } catch (e: Exception) { null }
+        val adManager = try {
+            AdManager(this)
+        } catch (e: Exception) {
+            null
+        }
+        val billingManager = try {
+            BillingManager(this)
+        } catch (e: Exception) {
+            null
+        }
         try {
             MobileAds.initialize(this) {
                 adManager?.loadRewardedAd()
@@ -307,21 +319,19 @@ class MainActivity : ComponentActivity() {
 }
 
 val GameColors = listOf(
-    Color(0xFFE6194B), // Red
-    Color(0xFF3CB44B), // Green
-    Color(0xFFFFE119), // Yellow
-    Color(0xFF4363D8), // Blue
-    Color(0xFFF58231), // Orange
-    Color(0xFF911EB4), // Purple
-    Color(0xFF42D4F4), // Cyan
-    Color(0xFFF032E6), // Magenta
-    Color(0xFFBFEF45), // Lime
-    Color(0xFF9A6324), // Brown
-    Color(0xFF000000)  // Black
+    Color(0xFFE6194B), Color(0xFF3CB44B), Color(0xFFFFE119), Color(0xFF4363D8),
+    Color(0xFFF58231), Color(0xFF911EB4), Color(0xFF42D4F4), Color(0xFFF032E6),
+    Color(0xFFBFEF45), Color(0xFF9A6324), Color(0xFF000000)
 )
 
-data class Ball(val id: String, val color: Color)
-data class Tube(val id: Int, val balls: List<Ball> = emptyList(), val maxCapacity: Int = 4)
+data class Ball(val id: String, val color: Color, val isStone: Boolean = false)
+data class Tube(
+    val id: Int,
+    val balls: List<Ball> = emptyList(),
+    val maxCapacity: Int = 4,
+    val targetColor: Color? = null
+)
+
 data class MoveAction(val fromTube: Int, val toTube: Int)
 
 data class GameState(
@@ -357,9 +367,7 @@ data class AppState(
     val adsRemoved: Boolean = false
 )
 
-enum class SoundEvent {
-    SELECT, MOVE, WIN, ERROR
-}
+enum class SoundEvent { SELECT, MOVE, WIN, ERROR }
 
 class SoundManager(context: Context) {
     private val soundPool: SoundPool
@@ -372,11 +380,7 @@ class SoundManager(context: Context) {
             .setUsage(AudioAttributes.USAGE_GAME)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(3)
-            .setAudioAttributes(audioAttributes)
-            .build()
-
+        soundPool = SoundPool.Builder().setMaxStreams(3).setAudioAttributes(audioAttributes).build()
         try {
             selectSoundId = soundPool.load(context, R.raw.select, 1)
             moveSoundId = soundPool.load(context, R.raw.move, 1)
@@ -443,8 +447,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     val soundEvents = _soundEvents.asSharedFlow()
 
     private val db = Room.databaseBuilder(
-        application,
-        AppDatabase::class.java, "ballsort-database"
+        application, AppDatabase::class.java, "ballsort-database"
     ).fallbackToDestructiveMigration().build()
     private val appStateDao = db.appStateDao()
 
@@ -460,26 +463,26 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                         soundEnabled = entity.soundEnabled,
                         hapticEnabled = entity.hapticEnabled,
                         lastClaimedDate = entity.lastClaimedDate,
-                        unlockedThemes = entity.unlockedThemes.split(",").filter { it.isNotBlank() },
+                        unlockedThemes = entity.unlockedThemes.split(",")
+                            .filter { it.isNotBlank() },
                         activeTheme = entity.activeTheme,
                         nextLifeTime = entity.nextLifeTime,
                         adsRemoved = entity.adsRemoved
                     )
                 }
             }
-
             withContext(Dispatchers.Main) {
                 checkDailyBonus()
                 startLevel(_appState.value.highestUnlockedLevel, changeScreen = false)
-            }
+                //_appState.update { it.copy(highestUnlockedLevel = 100) }
 
+                //startLevel(100, changeScreen = false)
+            }
             kotlinx.coroutines.GlobalScope.launch(Dispatchers.Main) {
                 while (true) {
-                    checkLifeRegen()
-                    kotlinx.coroutines.delay(1000)
+                    checkLifeRegen(); kotlinx.coroutines.delay(1000)
                 }
             }
-
             _appState.collect { state ->
                 appStateDao.saveAppState(
                     AppStateEntity(
@@ -506,13 +509,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             val timePassed = now - state.nextLifeTime
             val livesGained = 1 + (timePassed / (30 * 60 * 1000L)).toInt()
             val finalLives = (state.lives + livesGained).coerceAtMost(5)
-
-            val newNextLifeTime = if (finalLives < 5) {
-                state.nextLifeTime + livesGained * 30 * 60 * 1000L
-            } else {
-                0L
-            }
-
+            val newNextLifeTime =
+                if (finalLives < 5) state.nextLifeTime + livesGained * 30 * 60 * 1000L else 0L
             _appState.update { it.copy(lives = finalLives, nextLifeTime = newNextLifeTime) }
         } else if (state.lives < 5 && state.nextLifeTime == 0L) {
             _appState.update { it.copy(nextLifeTime = now + 30 * 60 * 1000L) }
@@ -523,7 +521,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         val state = _appState.value
         if (state.lives <= 0) return
         val now = System.currentTimeMillis()
-        val newNextLifeTime = if (state.lives == 5 || state.nextLifeTime == 0L) now + 30 * 60 * 1000L else state.nextLifeTime
+        val newNextLifeTime =
+            if (state.lives == 5 || state.nextLifeTime == 0L) now + 30 * 60 * 1000L else state.nextLifeTime
         _appState.update { it.copy(lives = state.lives - 1, nextLifeTime = newNextLifeTime) }
     }
 
@@ -551,28 +550,82 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
     fun startLevel(level: Int, changeScreen: Boolean = true) {
         if (_appState.value.lives <= 0 && changeScreen) return
-        if (changeScreen) {
-            _appState.update { it.copy(screen = Screen.GAME) }
-        }
+        if (changeScreen) _appState.update { it.copy(screen = Screen.GAME) }
 
         val isHardLevel = level % 5 == 0
-        val isBlindLevel = isHardLevel && level >= 100
+
+        var isBlindLevel = false
+        var hasTarget = false
+        var hasStones = false
+
+        // Feature Pacing & Mixing Logic
+        if (level >= 150) {
+            // After 150, mix and match features freely on hard levels
+            isBlindLevel = isHardLevel && Math.random() < 0.6
+            hasTarget = isHardLevel && Math.random() < 0.6
+            hasStones = isHardLevel && Math.random() < 0.6
+        } else {
+            // Before 150, strict introduction and separated mechanics
+            if (level == 50) {
+                isBlindLevel = true
+            } else if (level == 75) {
+                hasTarget = true
+            } else if (level == 100) {
+                hasStones = true
+            } else if (isHardLevel) {
+                if (level in 55..70) {
+                    isBlindLevel = true
+                } else if (level in 80..95) {
+                    if (level % 2 == 0) isBlindLevel = true else hasTarget = true
+                } else if (level in 105..145) {
+                    // Distribute mechanics evenly without overlap
+                    when ((level / 5) % 3) {
+                        0 -> isBlindLevel = true
+                        1 -> hasTarget = true
+                        2 -> hasStones = true
+                    }
+                }
+            } else {
+                // Occasional random spawns on normal levels
+                if (level > 75 && level < 150 && Math.random() < 0.15) hasTarget = true
+                if (level > 100 && level < 150 && Math.random() < 0.15) hasStones = true
+            }
+        }
 
         val baseColors = 3 + (level / 8)
         val numColors = kotlin.math.max(3, baseColors).coerceAtMost(GameColors.size)
-
         val colorsToUse = GameColors.shuffled().take(numColors)
+
+        val targetTubesMap = mutableMapOf<Int, Color>()
+        if (hasTarget) {
+            val numTargets = if (isHardLevel) 2 else 1
+            val targetIndices = (0 until numColors).shuffled().take(numTargets)
+            targetIndices.forEach { targetTubesMap[it] = colorsToUse[it] }
+        }
 
         val tubes = mutableListOf<Tube>()
         var ballIdCounter = 0
         for (i in 0 until numColors) {
             val balls = List(4) { Ball(id = "ball_${ballIdCounter++}", color = colorsToUse[i]) }
-            tubes.add(Tube(id = i, balls = balls))
+            tubes.add(Tube(id = tubes.size, balls = balls, targetColor = targetTubesMap[i]))
+        }
+
+        // Add Stones if mechanic is active
+        if (hasStones) {
+            val stoneBalls = List(4) {
+                Ball(
+                    id = "ball_${ballIdCounter++}",
+                    color = Color(0xFF64748B),
+                    isStone = true
+                )
+            }
+            // Stones are added to their own tube without a target color
+            tubes.add(Tube(id = tubes.size, balls = stoneBalls, targetColor = null))
         }
 
         val emptyTubesCount = if (isHardLevel) 1 else 2
         for (i in 0 until emptyTubesCount) {
-            tubes.add(Tube(id = numColors + i, balls = emptyList()))
+            tubes.add(Tube(id = tubes.size, balls = emptyList()))
         }
 
         var currentTubes = tubes.toList()
@@ -588,6 +641,13 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                 val sourceTube = currentTubes[s]
                 if (sourceTube.balls.isEmpty()) continue
 
+                val ballToMove = sourceTube.balls.last()
+
+                // Solvability Check: Don't pull a ball out of a target tube if it doesn't match
+                if (sourceTube.targetColor != null && ballToMove.color != sourceTube.targetColor) {
+                    continue
+                }
+
                 val canBackward = sourceTube.balls.size == 1 ||
                         sourceTube.balls[sourceTube.balls.size - 2].color == sourceTube.balls.last().color
 
@@ -601,7 +661,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                 }
             }
             if (validMoves.isNotEmpty()) {
-                val filtered = validMoves.filter { it.first != lastMove?.second || it.second != lastMove?.first }
+                val filtered =
+                    validMoves.filter { it.first != lastMove?.second || it.second != lastMove?.first }
                 val move = if (filtered.isNotEmpty()) filtered.random() else validMoves.random()
                 lastMove = move
 
@@ -623,9 +684,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         dp[history.lastIndex] = 0
         for (i in history.lastIndex downTo 0) {
             if (dp[i] == Int.MAX_VALUE) continue
-            if (i > 0) {
-                dp[i - 1] = kotlin.math.min(dp[i - 1], dp[i] + 1)
-            }
+            if (i > 0) dp[i - 1] = kotlin.math.min(dp[i - 1], dp[i] + 1)
             for (j in 0 until i - 1) {
                 if (isOneValidMove(history[i], history[j])) {
                     dp[j] = kotlin.math.min(dp[j], dp[i] + 1)
@@ -638,11 +697,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         val maxMovesAllowed = kotlin.math.max(1, kotlin.math.ceil(minMoves * multiplier).toInt())
 
         _uiState.value = GameState(
-            tubes = currentTubes,
-            level = level,
-            maxMoves = maxMovesAllowed,
-            isBlindMode = isBlindLevel,
-            earnedCoins = 0
+            tubes = currentTubes, level = level, maxMoves = maxMovesAllowed,
+            isBlindMode = isBlindLevel, earnedCoins = 0
         )
     }
 
@@ -659,7 +715,6 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             }
         }
         if (diffCount != 2) return false
-
         if (isValidMove(stateA, diff1, diff2, stateB)) return true
         if (isValidMove(stateA, diff2, diff1, stateB)) return true
         return false
@@ -672,6 +727,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         if (dstBallsA.size >= 4) return false
 
         val ballToMove = srcBallsA.last()
+        if (stateA[dst].targetColor != null && ballToMove.color != stateA[dst].targetColor) return false
+
         if (dstBallsA.isNotEmpty() && dstBallsA.last().color != ballToMove.color) return false
 
         val expectedSrcB = srcBallsA.dropLast(1)
@@ -709,15 +766,12 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
                     newTubes[index] = destTube.copy(balls = dBalls)
 
                     val moveAction = MoveAction(selected, index)
-
                     _soundEvents.tryEmit(SoundEvent.MOVE)
 
                     _uiState.update {
                         it.copy(
-                            tubes = newTubes,
-                            selectedTubeIndex = null,
-                            moveCount = it.moveCount + 1,
-                            undoStack = it.undoStack + moveAction
+                            tubes = newTubes, selectedTubeIndex = null,
+                            moveCount = it.moveCount + 1, undoStack = it.undoStack + moveAction
                         )
                     }
                     checkWinCondition()
@@ -731,8 +785,11 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     private fun canMove(source: Tube, dest: Tube): Boolean {
         if (source.balls.isEmpty()) return false
         if (dest.balls.size >= dest.maxCapacity) return false
+        val ball = source.balls.last()
+
+        if (dest.targetColor != null && ball.color != dest.targetColor) return false
         if (dest.balls.isEmpty()) return true
-        return source.balls.last().color == dest.balls.last().color
+        return ball.color == dest.balls.last().color
     }
 
     private fun checkWinCondition() {
@@ -743,7 +800,13 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         if (won && !state.isWon) {
             val rewardAmount = 25
             _soundEvents.tryEmit(SoundEvent.WIN)
-            _uiState.update { it.copy(isWon = true, selectedTubeIndex = null, earnedCoins = rewardAmount) }
+            _uiState.update {
+                it.copy(
+                    isWon = true,
+                    selectedTubeIndex = null,
+                    earnedCoins = rewardAmount
+                )
+            }
             _appState.update {
                 it.copy(
                     coins = it.coins + rewardAmount,
@@ -759,21 +822,15 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     fun undo() {
         val state = _uiState.value
         if (state.undoStack.isEmpty() || state.isWon) return
-
         val lastMove = state.undoStack.last()
         val newTubes = state.tubes.toMutableList()
-
         val sBalls = newTubes[lastMove.toTube].balls.toMutableList()
         val dBalls = newTubes[lastMove.fromTube].balls.toMutableList()
-
         val ball = sBalls.removeAt(sBalls.lastIndex)
         dBalls.add(ball)
-
         newTubes[lastMove.toTube] = newTubes[lastMove.toTube].copy(balls = sBalls)
         newTubes[lastMove.fromTube] = newTubes[lastMove.fromTube].copy(balls = dBalls)
-
         _soundEvents.tryEmit(SoundEvent.MOVE)
-
         _uiState.update {
             it.copy(
                 tubes = newTubes,
@@ -797,9 +854,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setTheme(themeId: String) {
-        if (_appState.value.unlockedThemes.contains(themeId)) {
-            _appState.update { it.copy(activeTheme = themeId) }
-        }
+        if (_appState.value.unlockedThemes.contains(themeId)) _appState.update { it.copy(activeTheme = themeId) }
     }
 
     fun addCoins(amount: Int) {
@@ -811,8 +866,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun spendCoins(amount: Int): Boolean {
-        val currentCoins = _appState.value.coins
-        if (currentCoins >= amount) {
+        if (_appState.value.coins >= amount) {
             _appState.update { it.copy(coins = it.coins - amount) }
             return true
         }
@@ -835,10 +889,8 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(isWon = false, selectedTubeIndex = null) }
             return
         }
-
         val newTubes = currentState.tubes.toMutableList()
         val undoStack = currentState.undoStack.reversed()
-
         for (move in undoStack) {
             val sBalls = newTubes[move.toTube].balls.toMutableList()
             val dBalls = newTubes[move.fromTube].balls.toMutableList()
@@ -847,7 +899,6 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
             newTubes[move.toTube] = newTubes[move.toTube].copy(balls = sBalls)
             newTubes[move.fromTube] = newTubes[move.fromTube].copy(balls = dBalls)
         }
-
         _uiState.update {
             it.copy(
                 tubes = newTubes,
@@ -865,11 +916,7 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
 
     fun goHome() {
         val state = _uiState.value
-        if (!state.isWon && state.moveCount > 0) {
-            if (_appState.value.lives > 0) {
-                consumeLife()
-            }
-        }
+        if (!state.isWon && state.moveCount > 0 && _appState.value.lives > 0) consumeLife()
         _appState.update { it.copy(screen = Screen.HOME) }
     }
 
@@ -877,8 +924,13 @@ class BallSortViewModel(application: Application) : AndroidViewModel(application
         _appState.update { it.copy(screen = screen) }
     }
 
-    fun toggleSound() { _appState.update { it.copy(soundEnabled = !it.soundEnabled) } }
-    fun toggleHaptics() { _appState.update { it.copy(hapticEnabled = !it.hapticEnabled) } }
+    fun toggleSound() {
+        _appState.update { it.copy(soundEnabled = !it.soundEnabled) }
+    }
+
+    fun toggleHaptics() {
+        _appState.update { it.copy(hapticEnabled = !it.hapticEnabled) }
+    }
 }
 
 @Composable
@@ -886,13 +938,24 @@ fun RowScope.StatBox(label: String, value: String, palette: ThemePalette) {
     Box(
         modifier = Modifier
             .weight(1f)
-            .background(palette.surfaceContainer, RoundedCornerShape(10.dp)) // Tighter corners
+            .background(palette.surfaceContainer, RoundedCornerShape(10.dp))
             .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 6.dp) // Reduced vertical padding
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Column {
-            Text(label, fontSize = 8.sp, color = palette.textPrimary.copy(alpha = 0.8f), fontWeight = FontWeight.ExtraBold, letterSpacing = 1.sp)
-            Text(value, fontSize = 16.sp, color = palette.textPrimary, fontWeight = FontWeight.ExtraBold)
+            Text(
+                label,
+                fontSize = 8.sp,
+                color = palette.textPrimary.copy(alpha = 0.8f),
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.sp
+            )
+            Text(
+                value,
+                fontSize = 16.sp,
+                color = palette.textPrimary,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
@@ -909,15 +972,13 @@ fun MarbleSortScreen(
     val context = LocalContext.current
     val soundManager = remember { SoundManager(context) }
 
-    DisposableEffect(Unit) {
-        onDispose { soundManager.release() }
-    }
+    DisposableEffect(Unit) { onDispose { soundManager.release() } }
 
     val view = androidx.compose.ui.platform.LocalView.current
     LaunchedEffect(viewModel) {
         viewModel.soundEvents.collect { event ->
             if (appState.soundEnabled) {
-                when(event) {
+                when (event) {
                     SoundEvent.SELECT -> soundManager.playSelect()
                     SoundEvent.MOVE -> soundManager.playMove()
                     SoundEvent.WIN -> soundManager.playWin()
@@ -925,24 +986,22 @@ fun MarbleSortScreen(
                 }
             }
             if (appState.hapticEnabled) {
-                when(event) {
+                when (event) {
                     SoundEvent.MOVE, SoundEvent.WIN -> {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
-                        } else {
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        }
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.CONFIRM
+                        )
+                        else view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                     }
+
                     SoundEvent.ERROR -> {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT)
-                        } else {
-                            view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                        }
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.REJECT
+                        )
+                        else view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                     }
-                    SoundEvent.SELECT -> {
-                        view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
-                    }
+
+                    SoundEvent.SELECT -> view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
                 }
             }
         }
@@ -950,13 +1009,17 @@ fun MarbleSortScreen(
 
     var showPowerUpDialog by remember { mutableStateOf(PowerUpType.NONE) }
     var showGiveUpDialog by remember { mutableStateOf(false) }
-    var showBlindModeIntro by remember(state.level) {
-        mutableStateOf(state.isBlindMode && state.level == 100)
-    }
+
+    // Intro Dialogs
+    var showBlindModeIntro by remember(state.level) { mutableStateOf(state.isBlindMode && state.level == 50) }
+    var showTargetIntro by remember(state.level) { mutableStateOf(state.level == 75) }
+    var showStoneIntro by remember(state.level) { mutableStateOf(state.level == 100) }
+
     val adManager = LocalAdManager.current
 
     @Suppress("ContextCastToActivity")
-    val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
+    val activity =
+        androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
 
     if (showBlindModeIntro) {
         AlertDialog(
@@ -965,13 +1028,66 @@ fun MarbleSortScreen(
             titleContentColor = Color(0xFF1E293B),
             textContentColor = Color(0xFF1E293B),
             title = { Text("⚠️ Blind Mode Activated!", fontWeight = FontWeight.ExtraBold) },
-            text = { Text("Welcome to the big leagues. From here on out, Boss levels will hide the bottom spheres in the tubes. They will only reveal themselves when they reach the top, or when you completely sort a tube. Good luck!", fontWeight = FontWeight.Medium) },
+            text = {
+                Text(
+                    "Welcome to the big leagues. From here on out, Boss levels will hide the bottom spheres in the tubes. They will only reveal themselves when they reach the top, or when you completely sort a tube. Good luck!",
+                    fontWeight = FontWeight.Medium
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = { showBlindModeIntro = false },
                     colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent)
                 ) {
                     Text("Got it!", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showTargetIntro) {
+        AlertDialog(
+            onDismissRequest = { showTargetIntro = false },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF1E293B),
+            textContentColor = Color(0xFF1E293B),
+            title = { Text("🔒 Locked Tubes!", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Text(
+                    "Things are getting tricky! Some tubes now have a colored Lock icon at the bottom. These 'Target Tubes' will ONLY accept balls of that specific color.",
+                    fontWeight = FontWeight.Medium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showTargetIntro = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent)
+                ) {
+                    Text("I'm ready!", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showStoneIntro) {
+        AlertDialog(
+            onDismissRequest = { showStoneIntro = false },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF1E293B),
+            textContentColor = Color(0xFF1E293B),
+            title = { Text("🪨 Stone Marbles!", fontWeight = FontWeight.ExtraBold) },
+            text = {
+                Text(
+                    "Starting now, you will encounter un-sortable Stone Marbles! They don't belong to any target color, but they take up valuable space. Group all the stones together into one tube to clear the level. Good luck!",
+                    fontWeight = FontWeight.Medium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showStoneIntro = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent)
+                ) {
+                    Text("Rock on!", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -987,7 +1103,12 @@ fun MarbleSortScreen(
             titleContentColor = Color(0xFF1E293B),
             textContentColor = Color(0xFF1E293B),
             title = { Text(title, fontWeight = FontWeight.ExtraBold) },
-            text = { Text("$desc\n\nCost: 1000 Coins or Watch an Ad", fontWeight = FontWeight.Medium) },
+            text = {
+                Text(
+                    "$desc\n\nCost: 1000 Coins or Watch an Ad",
+                    fontWeight = FontWeight.Medium
+                )
+            },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -999,24 +1120,24 @@ fun MarbleSortScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
                         enabled = appState.coins >= 1000
-                    ) {
-                        Text("1000 Coins", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
+                    ) { Text("1000 Coins", color = Color.Black, fontWeight = FontWeight.Bold) }
                     Button(
                         onClick = {
                             showPowerUpDialog = PowerUpType.NONE
-                            adManager.showRewardedAd(activity) {
-                                if (isUndo) viewModel.undo() else viewModel.addTube()
-                            }
+                            adManager.showRewardedAd(activity) { if (isUndo) viewModel.undo() else viewModel.addTube() }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
-                    ) {
-                        Text("Watch Ad", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                    ) { Text("Watch Ad", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showPowerUpDialog = PowerUpType.NONE }) { Text("Cancel", color = Color(0xFF475569), fontWeight = FontWeight.Bold) }
+                TextButton(onClick = { showPowerUpDialog = PowerUpType.NONE }) {
+                    Text(
+                        "Cancel",
+                        color = Color(0xFF475569),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         )
     }
@@ -1025,37 +1146,37 @@ fun MarbleSortScreen(
         AlertDialog(
             onDismissRequest = { showGiveUpDialog = false },
             containerColor = Color.White,
-            titleContentColor = Color(0xFFB91C1C), // Red 700
-            textContentColor = Color(0xFF1E293B), // Slate 800
+            titleContentColor = Color(0xFFB91C1C),
+            textContentColor = Color(0xFF1E293B),
             title = { Text("Are you stuck?", fontWeight = FontWeight.ExtraBold) },
-            text = { Text("Give up and lose a life to restart, or watch an ad to reverse your last move for free!", fontWeight = FontWeight.Medium) },
+            text = {
+                Text(
+                    "Give up and lose a life to restart, or watch an ad to reverse your last move for free!",
+                    fontWeight = FontWeight.Medium
+                )
+            },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = {
-                            showGiveUpDialog = false
-                            viewModel.restartLevel()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)) // Red 600
-                    ) {
-                        Text("Give Up", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                        onClick = { showGiveUpDialog = false; viewModel.restartLevel() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    ) { Text("Give Up", color = Color.White, fontWeight = FontWeight.Bold) }
                     Button(
                         onClick = {
-                            showGiveUpDialog = false
-                            adManager.showRewardedAd(activity) {
-                                viewModel.undo()
-                            }
+                            showGiveUpDialog =
+                                false; adManager.showRewardedAd(activity) { viewModel.undo() }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)) // Blue 600
-                    ) {
-                        Text("Watch Ad (Undo)", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                    ) { Text("Watch Ad (Undo)", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showGiveUpDialog = false }) {
-                    Text("Cancel", color = Color(0xFF475569), fontWeight = FontWeight.Bold)
+                    Text(
+                        "Cancel",
+                        color = Color(0xFF475569),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
@@ -1066,73 +1187,95 @@ fun MarbleSortScreen(
             .fillMaxSize()
             .background(brush = palette.backgroundBrush)
     ) {
-
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Header - REDUCED PADDING
+        Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 4.dp), // Tighter top/bottom
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     IconButton(
                         onClick = { viewModel.goHome() },
                         modifier = Modifier
-                            .size(36.dp) // Smaller back button
+                            .size(36.dp)
                             .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF6B8CE0))
                             .background(palette.surfaceContainer, RoundedCornerShape(10.dp))
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Home", tint = palette.textPrimary, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Home",
+                            tint = palette.textPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     Text(
                         text = "Level ${state.level}",
                         color = palette.textPrimary,
                         style = MaterialTheme.typography.titleLarge,
-                        fontSize = 20.sp, // Slightly smaller text
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     var timerText by remember { mutableStateOf(if (appState.lives >= 5) "MAX" else "") }
-
                     LaunchedEffect(appState.lives, appState.nextLifeTime) {
-                        if (appState.lives >= 5) {
-                            timerText = "MAX"
-                        } else {
+                        if (appState.lives >= 5) timerText = "MAX"
+                        else {
                             while (true) {
                                 val remaining = appState.nextLifeTime - System.currentTimeMillis()
                                 if (remaining > 0) {
                                     val mins = (remaining / 60000).toInt()
                                     val secs = ((remaining % 60000) / 1000).toInt()
-                                    timerText = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
-                                } else {
-                                    timerText = "00:00"
-                                }
+                                    timerText =
+                                        String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+                                } else timerText = "00:00"
                                 kotlinx.coroutines.delay(1000)
                             }
                         }
                     }
-                    StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, palette = palette)
-                    StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", palette = palette)
+                    StatPill(
+                        icon = Icons.Default.Favorite,
+                        tint = Color(0xFFEF4444),
+                        text = "${appState.lives}",
+                        label = timerText,
+                        palette = palette
+                    )
+                    StatPill(
+                        icon = Icons.Default.Star,
+                        tint = Color(0xFFFBBF24),
+                        text = "${appState.coins}",
+                        label = "",
+                        palette = palette
+                    )
                 }
             }
 
-            // Stats
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp), // Tighter vertical padding
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatBox(label = "MOVES", value = state.moveCount.toString().padStart(3, '0'), palette = palette)
-                StatBox(label = "MOVES LEFT", value = state.movesLeft.toString().padStart(3, '0'), palette = palette)
+                StatBox(
+                    label = "MOVES",
+                    value = state.moveCount.toString().padStart(3, '0'),
+                    palette = palette
+                )
+                StatBox(
+                    label = "MOVES LEFT",
+                    value = state.movesLeft.toString().padStart(3, '0'),
+                    palette = palette
+                )
             }
 
-            // Grid
             TubeGrid(
                 modifier = Modifier.weight(1f),
                 tubes = state.tubes,
@@ -1140,54 +1283,98 @@ fun MarbleSortScreen(
                 activeTheme = appState.activeTheme,
                 palette = palette,
                 isBlindMode = state.isBlindMode,
+                moveCount = state.moveCount,
                 onTubeSelect = { viewModel.selectTube(it) }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Footer - RECTANGULAR Power Ups
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .padding(bottom = 76.dp), // Keeps it safely above the ad banner
+                    .padding(bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Add Tube Power Up
+                val isTubeEnabled = !state.isWon && !state.isLost
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp) // Rectangular height instead of 84.dp square
-                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF76DB9E))
-                        .background(if (!state.isWon && !state.isLost) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(16.dp))
-                        .clickable(enabled = !state.isWon && !state.isLost) { showPowerUpDialog = PowerUpType.ADD_TUBE },
+                        .height(52.dp)
+                        .shadow(
+                            if (isTubeEnabled) 4.dp else 0.dp,
+                            RoundedCornerShape(16.dp),
+                            spotColor = Color(0xFF76DB9E)
+                        )
+                        .background(
+                            if (isTubeEnabled) palette.buttonAccent else palette.surfaceContainer,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable(enabled = isTubeEnabled) {
+                            showPowerUpDialog = PowerUpType.ADD_TUBE
+                        },
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Tube", tint = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Tube",
+                        tint = if (isTubeEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(
+                            alpha = 0.5f
+                        ),
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tube", color = if (!state.isWon && !state.isLost) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "Tube",
+                        color = if (isTubeEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(
+                            alpha = 0.5f
+                        ),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
 
-                // Undo Power Up
                 val isUndoEnabled = state.undoStack.isNotEmpty() && !state.isWon && !state.isLost
                 Row(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp)
-                        .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF6B8CE0))
-                        .background(if (isUndoEnabled) palette.buttonAccent else palette.surfaceContainer, RoundedCornerShape(16.dp))
-                        .clickable(enabled = isUndoEnabled) { showPowerUpDialog = PowerUpType.UNDO },
+                        .shadow(
+                            if (isUndoEnabled) 4.dp else 0.dp,
+                            RoundedCornerShape(16.dp),
+                            spotColor = Color(0xFF6B8CE0)
+                        )
+                        .background(
+                            if (isUndoEnabled) palette.buttonAccent else palette.surfaceContainer,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable(enabled = isUndoEnabled) {
+                            showPowerUpDialog = PowerUpType.UNDO
+                        },
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = "Undo",
+                        tint = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(
+                            alpha = 0.5f
+                        ),
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Undo", color = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "Undo",
+                        color = if (isUndoEnabled) Color(0xFF1E293B) else palette.textPrimary.copy(
+                            alpha = 0.5f
+                        ),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
 
-                // Restart / Give Up
                 Row(
                     modifier = Modifier
                         .weight(1f)
@@ -1198,28 +1385,23 @@ fun MarbleSortScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Restart", tint = Color(0xFF1E293B), modifier = Modifier.size(22.dp))
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Restart",
+                        tint = Color(0xFF1E293B),
+                        modifier = Modifier.size(22.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Restart", color = Color(0xFF1E293B), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(
+                        "Restart",
+                        color = Color(0xFF1E293B),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
-
-            // Bottom Indicator line
-            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.width(128.dp).height(4.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(50)))
-            }
         }
 
-        // Game Banner Ad
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-        ) {
-            AdmobBanner(appState.adsRemoved)
-        }
-
-        // Win Overlay
         if (state.isWon) {
             Box(
                 modifier = Modifier
@@ -1248,8 +1430,16 @@ fun MarbleSortScreen(
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Default.Star, contentDescription = "Coins", tint = Color(0xFFFBBF24), modifier = Modifier.size(24.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = "Coins",
+                                tint = Color(0xFFFBBF24),
+                                modifier = Modifier.size(24.dp)
+                            )
                             Text(
                                 text = "+${state.earnedCoins}",
                                 style = MaterialTheme.typography.titleLarge,
@@ -1261,25 +1451,26 @@ fun MarbleSortScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(
                                 onClick = { viewModel.goHome() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151))
-                            ) {
-                                Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
-                            }
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF374151)
+                                )
+                            ) { Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp)) }
                             Button(
                                 onClick = {
-                                    val levelsCompleted = viewModel.appState.value.highestUnlockedLevel - 1
-                                    if (levelsCompleted % 2 == 0) {
-                                        adManager.showInterstitialAd(activity, appState.adsRemoved) {
-                                            viewModel.nextLevel()
-                                        }
-                                    } else {
-                                        viewModel.nextLevel()
-                                    }
+                                    val levelsCompleted =
+                                        viewModel.appState.value.highestUnlockedLevel - 1
+                                    if (levelsCompleted % 2 == 0) adManager.showInterstitialAd(
+                                        activity,
+                                        appState.adsRemoved
+                                    ) { viewModel.nextLevel() }
+                                    else viewModel.nextLevel()
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF43A047))
-                            ) {
-                                Text("Next", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
-                            }
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFF43A047
+                                    )
+                                )
+                            ) { Text("Next", fontSize = 18.sp, modifier = Modifier.padding(8.dp)) }
                         }
                     }
                 }
@@ -1316,22 +1507,30 @@ fun MarbleSortScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Button(
                                 onClick = { viewModel.goHome() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF374151))
-                            ) {
-                                Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp))
-                            }
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF374151)
+                                )
+                            ) { Text("Home", fontSize = 18.sp, modifier = Modifier.padding(8.dp)) }
                             Button(
-                                onClick = {
-                                    adManager.showRewardedAd(activity) {
-                                        viewModel.undo()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF82A6F1))
+                                onClick = { adManager.showRewardedAd(activity) { viewModel.undo() } },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(
+                                        0xFF82A6F1
+                                    )
+                                )
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, tint = Color.White)
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Undo (Ad)", fontSize = 16.sp, modifier = Modifier.padding(vertical = 8.dp))
+                                    Text(
+                                        "Undo (Ad)",
+                                        fontSize = 16.sp,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
                                 }
                             }
                         }
@@ -1345,11 +1544,8 @@ fun MarbleSortScreen(
 @Composable
 fun TubeGrid(
     modifier: Modifier = Modifier,
-    tubes: List<Tube>,
-    selectedTubeIndex: Int?,
-    activeTheme: String,
-    palette: ThemePalette,
-    isBlindMode: Boolean,
+    tubes: List<Tube>, selectedTubeIndex: Int?, activeTheme: String,
+    palette: ThemePalette, isBlindMode: Boolean, moveCount: Int,
     onTubeSelect: (Int) -> Unit
 ) {
     BoxWithConstraints(
@@ -1360,23 +1556,15 @@ fun TubeGrid(
     ) {
         val screenWidth = maxWidth.value
         val screenHeight = maxHeight.value
-
-        // Dynamically compute columns based on screen width.
         val columns = maxOf(4, (screenWidth / 75).toInt()).coerceAtMost(8)
         val chunks = tubes.chunked(columns)
-
         val rows = chunks.size
         val baseTubeHeight = 176f + 48f
-
         val widthScale = (screenWidth / 360f)
-
-        // UPDATED: Calculate height based on a MAXIMUM of 2 rows.
-        // 1 or 2 rows will shrink to fit the screen. 3+ rows will use the 2-row size and scroll.
         val visibleRows = minOf(rows, 2)
-        val heightScale = if (visibleRows > 0) (screenHeight / (baseTubeHeight * visibleRows)) * 0.95f else 1f
-
+        val heightScale =
+            if (visibleRows > 0) (screenHeight / (baseTubeHeight * visibleRows)) * 0.95f else 1f
         val scaleFactor = minOf(widthScale, heightScale).coerceIn(0.6f, 1.3f)
-
         val tubeWidth = (48 * scaleFactor).dp
         val tubeHeight = (176 * scaleFactor).dp
         val ballSize = (36 * scaleFactor).dp
@@ -1385,19 +1573,10 @@ fun TubeGrid(
         val bottomPadding = (6 * scaleFactor).dp
 
         val scrollState = rememberScrollState()
-
-        // UPDATED: Auto-hide the scroll indicator
         var showIndicator by remember(tubes.size) { mutableStateOf(true) }
 
-        LaunchedEffect(tubes.size) {
-            delay(4000) // Hide automatically after 4 seconds
-            showIndicator = false
-        }
-        LaunchedEffect(scrollState.value) {
-            if (scrollState.value > 10) { // Hide instantly if the user starts scrolling
-                showIndicator = false
-            }
-        }
+        LaunchedEffect(tubes.size) { delay(4000); showIndicator = false }
+        LaunchedEffect(scrollState.value) { if (scrollState.value > 10) showIndicator = false }
 
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -1406,7 +1585,7 @@ fun TubeGrid(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(bottom = 60.dp) // Extra padding so the last row isn't flush with the bottom
+                    .padding(bottom = 60.dp)
             ) {
                 for (chunk in chunks) {
                     Row(
@@ -1421,6 +1600,7 @@ fun TubeGrid(
                                 activeTheme = activeTheme,
                                 palette = palette,
                                 isBlindMode = isBlindMode,
+                                moveCount = moveCount,
                                 tubeWidth = tubeWidth,
                                 tubeHeight = tubeHeight,
                                 ballSize = ballSize,
@@ -1433,8 +1613,6 @@ fun TubeGrid(
                     }
                 }
             }
-
-            // Floating, bouncing indicator that appears only if there is off-screen content
             AnimatedVisibility(
                 visible = scrollState.canScrollForward && showIndicator,
                 enter = fadeIn(),
@@ -1451,7 +1629,6 @@ fun TubeGrid(
                     ),
                     label = "yOffset"
                 )
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -1488,6 +1665,7 @@ fun TubeView(
     activeTheme: String,
     palette: ThemePalette,
     isBlindMode: Boolean,
+    moveCount: Int,
     tubeWidth: androidx.compose.ui.unit.Dp = 48.dp,
     tubeHeight: androidx.compose.ui.unit.Dp = 176.dp,
     ballSize: androidx.compose.ui.unit.Dp = 36.dp,
@@ -1498,7 +1676,9 @@ fun TubeView(
 ) {
     val ringColor = if (isSelected) palette.selectionGlowColor else Color.Transparent
     val totalHeight = tubeHeight + liftOffset
-    val isSortedTube = tube.balls.size == tube.maxCapacity && tube.balls.all { it.color == tube.balls.first().color }
+    val isSortedTube =
+        tube.balls.size == tube.maxCapacity && tube.balls.all { it.color == tube.balls.first().color }
+    val effectiveBorderColor = tube.targetColor?.copy(alpha = 0.85f) ?: palette.tubeBorderColor
 
     Box(
         contentAlignment = Alignment.BottomCenter,
@@ -1511,7 +1691,6 @@ fun TubeView(
                 onClick = onTubeClick
             )
     ) {
-        // Tube Container (Dynamic Glass effect)
         Box(
             modifier = Modifier
                 .width(tubeWidth)
@@ -1525,38 +1704,69 @@ fun TubeView(
                             Color.White.copy(alpha = palette.tubeGlassAlpha * 0.5f)
                         )
                     ),
-                    shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
+                    shape = RoundedCornerShape(
+                        bottomStart = tubeWidth / 2,
+                        bottomEnd = tubeWidth / 2
+                    )
                 )
                 .border(
                     width = (3 * (tubeWidth.value / 48f)).dp,
-                    color = palette.tubeBorderColor,
-                    shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
+                    color = effectiveBorderColor,
+                    shape = RoundedCornerShape(
+                        bottomStart = tubeWidth / 2,
+                        bottomEnd = tubeWidth / 2
+                    )
                 )
                 .border(
                     width = if (isSelected) (4 * (tubeWidth.value / 48f)).dp else 0.dp,
                     color = ringColor,
-                    shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
+                    shape = RoundedCornerShape(
+                        bottomStart = tubeWidth / 2,
+                        bottomEnd = tubeWidth / 2
+                    )
                 )
         ) {
-            // Inner shadow / rim highlight
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .border(
                         width = (1 * (tubeWidth.value / 48f)).dp,
-                        color = Color.Black.copy(alpha = if(activeTheme == "NEON") 0f else 0.05f),
-                        shape = RoundedCornerShape(bottomStart = tubeWidth / 2, bottomEnd = tubeWidth / 2)
+                        color = Color.Black.copy(alpha = if (activeTheme == "NEON") 0f else 0.05f),
+                        shape = RoundedCornerShape(
+                            bottomStart = tubeWidth / 2,
+                            bottomEnd = tubeWidth / 2
+                        )
                     )
             )
+
+            if (tube.targetColor != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = (12 * (tubeWidth.value / 48f)).dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Target Color",
+                        tint = tube.targetColor,
+                        modifier = Modifier
+                            .size((22 * (tubeWidth.value / 48f)).dp)
+                            .shadow(2.dp, CircleShape)
+                            .background(Color(0xFF1E293B).copy(alpha = 0.95f), CircleShape)
+                            .padding((4 * (tubeWidth.value / 48f)).dp)
+                    )
+                }
+            }
         }
 
-        // Balls
         tube.balls.forEachIndexed { index, ball ->
             val isTop = index == tube.balls.size - 1
             val isLifting = isSelected && isTop
-            val isHidden = isBlindMode && index < 2 && !isTop && !isSortedTube
+            // Only hide balls in blind mode AFTER the first move has been made
+            val isHidden = isBlindMode && index < 2 && !isTop && !isSortedTube && moveCount > 0
 
-            val targetY = -(index * ballSpacing.value + bottomPadding.value).dp - if (isLifting) liftOffset else 0.dp
+            val targetY =
+                -(index * ballSpacing.value + bottomPadding.value).dp - if (isLifting) liftOffset else 0.dp
             val yOffset by animateDpAsState(
                 targetValue = targetY,
                 animationSpec = tween(durationMillis = 300),
@@ -1578,15 +1788,22 @@ fun TubeView(
 }
 
 @Composable
-fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palette: ThemePalette, isHidden: Boolean, modifier: Modifier = Modifier) {
-    val isLiftingBorder = if (isSelectedLifting) palette.selectionGlowColor.copy(alpha = 0.8f) else Color.Transparent
+fun BallView(
+    ball: Ball,
+    isSelectedLifting: Boolean,
+    activeTheme: String,
+    palette: ThemePalette,
+    isHidden: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val isLiftingBorder =
+        if (isSelectedLifting) palette.selectionGlowColor.copy(alpha = 0.8f) else Color.Transparent
     Canvas(modifier = modifier) {
         val radius = size.width / 2f
 
         if (isHidden) {
             when (activeTheme) {
                 "NEON" -> {
-                    // Dark core with a faint neon wireframe lock outline
                     drawCircle(color = Color(0xFF0F172A))
                     drawCircle(
                         color = palette.tubeBorderColor.copy(alpha = 0.4f),
@@ -1598,59 +1815,86 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                         style = Stroke(width = 1.5.dp.toPx())
                     )
                 }
+
                 "COSMIC" -> {
-                    // Dark unlit moon / celestial eclipse sphere
                     drawCircle(color = Color(0xFF090D16))
                     drawCircle(
                         color = Color(0xFF38BDF8).copy(alpha = 0.25f),
                         radius = radius,
                         style = Stroke(width = 1.5.dp.toPx())
                     )
-                    // Crescent shadow rim
                     drawCircle(
                         color = Color.White.copy(alpha = 0.2f),
                         radius = radius * 0.85f,
                         center = Offset(radius * 0.8f, radius * 0.8f)
                     )
                 }
+
                 "FANTASY" -> {
-                    // Raw uncut obsidian stone
                     val path = Path().apply {
-                        moveTo(radius, 0f)
-                        lineTo(size.width, radius)
-                        lineTo(radius, size.height)
-                        lineTo(0f, radius)
-                        close()
+                        moveTo(radius, 0f); lineTo(
+                        size.width,
+                        radius
+                    ); lineTo(radius, size.height); lineTo(0f, radius); close()
                     }
                     drawPath(path, Color(0xFF1F1D2B))
-                    drawPath(path, palette.buttonAccent.copy(alpha = 0.3f), style = Stroke(width = 1.5.dp.toPx()))
+                    drawPath(
+                        path,
+                        palette.buttonAccent.copy(alpha = 0.3f),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
                 }
+
                 else -> {
-                    // Classic / Pastel: Matte mystery sphere
                     drawCircle(color = Color(0xFF334155))
                     drawCircle(
                         color = Color.White.copy(alpha = 0.25f),
                         style = Stroke(width = 2.dp.toPx())
                     )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.5f),
-                        radius = radius * 0.2f
-                    )
+                    drawCircle(color = Color.White.copy(alpha = 0.5f), radius = radius * 0.2f)
                 }
             }
             return@Canvas
         }
 
+        if (ball.isStone) {
+            // Draw a rugged rock
+            drawCircle(color = Color(0xFF475569)) // Base slate
+            // Add craters/shadows
+            drawCircle(
+                color = Color(0xFF334155),
+                radius = radius * 0.4f,
+                center = Offset(radius * 0.6f, radius * 0.6f)
+            )
+            drawCircle(
+                color = Color(0xFF334155),
+                radius = radius * 0.25f,
+                center = Offset(radius * 1.4f, radius * 1.3f)
+            )
+            drawCircle(
+                color = Color(0xFF334155),
+                radius = radius * 0.15f,
+                center = Offset(radius * 1.2f, radius * 0.5f)
+            )
+            // Add subtle highlight edge
+            val bottomRim = Brush.verticalGradient(
+                colors = listOf(
+                    Color.Transparent,
+                    Color.White.copy(alpha = 0.2f)
+                ), startY = radius, endY = size.height
+            )
+            drawCircle(brush = bottomRim, style = Stroke(width = 1.dp.toPx()))
+            if (isSelectedLifting) drawCircle(
+                color = isLiftingBorder,
+                style = Stroke(width = 2.dp.toPx())
+            )
+            return@Canvas
+        }
+
         if (activeTheme == "NEON") {
             drawCircle(color = Color.Black)
-            drawCircle(
-                color = ball.color,
-                style = Stroke(width = 4.dp.toPx())
-            )
-            drawCircle(
-                color = ball.color.copy(alpha = 0.4f),
-                style = Stroke(width = 12.dp.toPx())
-            )
+            drawCircle(color = ball.color, style = Stroke(width = 4.dp.toPx()))
+            drawCircle(color = ball.color.copy(alpha = 0.4f), style = Stroke(width = 12.dp.toPx()))
         } else if (activeTheme == "PASTEL") {
             val pastelColor = ball.color.copy(alpha = 0.8f)
             drawCircle(color = pastelColor)
@@ -1675,30 +1919,39 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 size = Size(size.width * 1.4f, size.height * 0.4f),
                 style = Stroke(width = 2.dp.toPx())
             )
-            drawCircle(color = Color.White, radius = 2f, center = Offset(radius * 0.4f, radius * 0.5f))
-            drawCircle(color = Color.White, radius = 1.5f, center = Offset(radius * 1.5f, radius * 0.3f))
-
+            drawCircle(
+                color = Color.White,
+                radius = 2f,
+                center = Offset(radius * 0.4f, radius * 0.5f)
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 1.5f,
+                center = Offset(radius * 1.5f, radius * 0.3f)
+            )
         } else if (activeTheme == "FANTASY") {
             val path = Path().apply {
-                moveTo(radius, 0f)
-                lineTo(size.width, radius)
-                lineTo(radius, size.height)
-                lineTo(0f, radius)
-                close()
+                moveTo(radius, 0f); lineTo(size.width, radius); lineTo(
+                radius,
+                size.height
+            ); lineTo(0f, radius); close()
             }
             drawPath(path, ball.color)
             drawPath(path, Color.White.copy(alpha = 0.3f), style = Stroke(width = 2.dp.toPx()))
-
             val sparkle = Path().apply {
-                moveTo(radius, radius * 0.2f)
-                quadraticBezierTo(radius, radius, radius * 1.8f, radius)
-                quadraticBezierTo(radius, radius, radius, radius * 1.8f)
-                quadraticBezierTo(radius, radius, radius * 0.2f, radius)
-                quadraticBezierTo(radius, radius, radius, radius * 0.2f)
-                close()
+                moveTo(radius, radius * 0.2f); quadraticBezierTo(
+                radius,
+                radius,
+                radius * 1.8f,
+                radius
+            ); quadraticBezierTo(radius, radius, radius, radius * 1.8f); quadraticBezierTo(
+                radius,
+                radius,
+                radius * 0.2f,
+                radius
+            ); quadraticBezierTo(radius, radius, radius, radius * 0.2f); close()
             }
             drawPath(sparkle, Color.White.copy(alpha = 0.8f))
-
         } else {
             drawCircle(
                 color = Color.Black.copy(alpha = 0.15f),
@@ -1706,19 +1959,20 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 center = Offset(radius, radius + 2.dp.toPx())
             )
             val radial = Brush.radialGradient(
-                colors = listOf(ball.color.copy(alpha = 0.5f), ball.color.copy(alpha = 0.95f), ball.color.copy(alpha = 0.7f)),
-                center = Offset(radius, radius),
-                radius = radius
+                colors = listOf(
+                    ball.color.copy(alpha = 0.5f),
+                    ball.color.copy(alpha = 0.95f),
+                    ball.color.copy(alpha = 0.7f)
+                ), center = Offset(radius, radius), radius = radius
             )
             drawCircle(brush = radial)
-
             val bottomRim = Brush.verticalGradient(
-                colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f)),
-                startY = radius,
-                endY = size.height
+                colors = listOf(
+                    Color.Transparent,
+                    Color.White.copy(alpha = 0.6f)
+                ), startY = radius, endY = size.height
             )
             drawCircle(brush = bottomRim, style = Stroke(width = 1.dp.toPx()))
-
             drawCircle(
                 color = Color.White.copy(alpha = 0.5f),
                 radius = radius * 0.4f,
@@ -1730,13 +1984,10 @@ fun BallView(ball: Ball, isSelectedLifting: Boolean, activeTheme: String, palett
                 center = Offset(radius * 0.7f, radius * 0.3f)
             )
         }
-
-        if (isSelectedLifting) {
-            drawCircle(
-                color = isLiftingBorder,
-                style = Stroke(width = 2.dp.toPx())
-            )
-        }
+        if (isSelectedLifting) drawCircle(
+            color = isLiftingBorder,
+            style = Stroke(width = 2.dp.toPx())
+        )
     }
 }
 
@@ -1745,14 +1996,14 @@ fun AppNavHost(modifier: Modifier = Modifier, viewModel: BallSortViewModel = vie
     val appState by viewModel.appState.collectAsState()
     val billingManager = LocalBillingManager.current
     val restoredPurchases by billingManager.restoredPurchases.collectAsState()
-
     LaunchedEffect(restoredPurchases) {
-        if (restoredPurchases.contains("remove_ads") && !appState.adsRemoved) {
-            viewModel.removeAds()
-        }
+        if (restoredPurchases.contains("remove_ads") && !appState.adsRemoved) viewModel.removeAds()
     }
-
-    Crossfade(targetState = appState.screen, modifier = modifier, label = "screen_transition") { screen ->
+    Crossfade(
+        targetState = appState.screen,
+        modifier = modifier,
+        label = "screen_transition"
+    ) { screen ->
         when (screen) {
             Screen.GAME -> MarbleSortScreen(viewModel = viewModel)
             else -> MainTabScreen(viewModel = viewModel, screen = screen)
@@ -1761,62 +2012,111 @@ fun AppNavHost(modifier: Modifier = Modifier, viewModel: BallSortViewModel = vie
 }
 
 @Composable
-fun StatPill(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, text: String, label: String, palette: ThemePalette, isLarge: Boolean = false) {
+fun StatPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    text: String,
+    label: String,
+    palette: ThemePalette,
+    isLarge: Boolean = false
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .shadow(if (isLarge) 4.dp else 2.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.05f))
+            .shadow(
+                if (isLarge) 4.dp else 2.dp,
+                CircleShape,
+                spotColor = Color.Black.copy(alpha = 0.05f)
+            )
             .background(palette.surfaceContainer, CircleShape)
             .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-            .padding(horizontal = if (isLarge) 16.dp else 8.dp, vertical = if (isLarge) 8.dp else 4.dp)
+            .padding(
+                horizontal = if (isLarge) 16.dp else 8.dp,
+                vertical = if (isLarge) 8.dp else 4.dp
+            )
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (isLarge) 24.dp else 16.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(if (isLarge) 24.dp else 16.dp)
+        )
         Spacer(Modifier.width(if (isLarge) 8.dp else 6.dp))
-        Text(text, color = palette.textPrimary, fontWeight = FontWeight.ExtraBold, fontSize = if (isLarge) 18.sp else 14.sp)
+        Text(
+            text,
+            color = palette.textPrimary,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = if (isLarge) 18.sp else 14.sp
+        )
         if (label.isNotEmpty()) {
             Spacer(Modifier.width(4.dp))
-            Text(label, color = palette.textPrimary.copy(alpha = 0.8f), fontSize = if (isLarge) 12.sp else 10.sp, fontWeight = FontWeight.Bold)
+            Text(
+                label,
+                color = palette.textPrimary.copy(alpha = 0.8f),
+                fontSize = if (isLarge) 12.sp else 10.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
 @Composable
-fun LevelNode(level: Int, isCompleted: Boolean, isCurrent: Boolean, isLocked: Boolean, palette: ThemePalette, isHardLevel: Boolean = false) {
+fun LevelNode(
+    level: Int,
+    isCompleted: Boolean,
+    isCurrent: Boolean,
+    isLocked: Boolean,
+    palette: ThemePalette,
+    isHardLevel: Boolean = false
+) {
     val size = if (isCurrent) 90.dp else 70.dp
-    val color = if (isCompleted) {
-        palette.buttonAccent.copy(alpha = 0.8f)
-    } else if (isCurrent) {
-        palette.buttonAccent
-    } else {
-        palette.surfaceContainer
-    }
+    val color =
+        if (isCompleted) palette.buttonAccent.copy(alpha = 0.8f) else if (isCurrent) palette.buttonAccent else palette.surfaceContainer
     val contentColor = if (isLocked) palette.textPrimary.copy(alpha = 0.5f) else Color.White
-
-    Box(
-        modifier = Modifier.height(140.dp).width(120.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(modifier = Modifier.width(8.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.2f)))
-
+    Box(modifier = Modifier
+        .height(140.dp)
+        .width(120.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .width(8.dp)
+                .fillMaxHeight()
+                .background(Color.White.copy(alpha = 0.2f))
+        )
         Box(
             modifier = Modifier
                 .size(size)
-                .shadow(if (isCurrent) 8.dp else 4.dp, CircleShape, spotColor = if (isCurrent) palette.buttonAccent else Color.Black.copy(alpha = 0.05f))
+                .shadow(
+                    if (isCurrent) 8.dp else 4.dp,
+                    CircleShape,
+                    spotColor = if (isCurrent) palette.buttonAccent else Color.Black.copy(alpha = 0.05f)
+                )
                 .background(color, CircleShape)
                 .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text("$level", color = contentColor, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            Text(
+                "$level",
+                color = contentColor,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
 
 @Composable
-fun TabItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit) {
+fun TabItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
     val color = if (isSelected) Color(0xFF1E293B) else Color(0xFF475569)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick).padding(8.dp)
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(8.dp)
     ) {
         Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(28.dp))
         Spacer(Modifier.height(4.dp))
@@ -1828,7 +2128,6 @@ fun TabItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String
 fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
     val appState by viewModel.appState.collectAsState()
     val palette = getThemePalette(appState.activeTheme)
-
     if (appState.showDailyBonusDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDailyBonus() },
@@ -1836,69 +2135,89 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
             titleContentColor = Color(0xFF1E293B),
             textContentColor = Color(0xFF1E293B),
             title = { Text("Daily Bonus!", fontWeight = FontWeight.ExtraBold) },
-            text = { Text("Welcome back! Here are your 50 daily coins.", fontWeight = FontWeight.Medium) },
+            text = {
+                Text(
+                    "Welcome back! Here are your 50 daily coins.",
+                    fontWeight = FontWeight.Medium
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = { viewModel.claimDailyBonus() },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBBF24))
-                ) {
-                    Text("Claim 50 Coins", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
+                ) { Text("Claim 50 Coins", color = Color.Black, fontWeight = FontWeight.Bold) }
             }
         )
     }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush = palette.backgroundBrush)
-    ) {
-
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(brush = palette.backgroundBrush)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier.fillMaxWidth().padding(24.dp).zIndex(1f), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .zIndex(1f),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 var timerText by remember { mutableStateOf(if (appState.lives >= 5) "MAX" else "") }
-
                 LaunchedEffect(appState.lives, appState.nextLifeTime) {
-                    if (appState.lives >= 5) {
-                        timerText = "MAX"
-                    } else {
+                    if (appState.lives >= 5) timerText = "MAX"
+                    else {
                         while (true) {
                             val remaining = appState.nextLifeTime - System.currentTimeMillis()
                             if (remaining > 0) {
                                 val mins = (remaining / 60000).toInt()
                                 val secs = ((remaining % 60000) / 1000).toInt()
-                                timerText = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
-                            } else {
-                                timerText = "00:00"
-                            }
+                                timerText =
+                                    String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+                            } else timerText = "00:00"
                             kotlinx.coroutines.delay(1000)
                         }
                     }
                 }
-
-                StatPill(icon = Icons.Default.Favorite, tint = Color(0xFFEF4444), text = "${appState.lives}", label = timerText, palette = palette, isLarge = true)
-                StatPill(icon = Icons.Default.Star, tint = Color(0xFFFBBF24), text = "${appState.coins}", label = "", palette = palette, isLarge = true)
+                StatPill(
+                    icon = Icons.Default.Favorite,
+                    tint = Color(0xFFEF4444),
+                    text = "${appState.lives}",
+                    label = timerText,
+                    palette = palette,
+                    isLarge = true
+                )
+                StatPill(
+                    icon = Icons.Default.Star,
+                    tint = Color(0xFFFBBF24),
+                    text = "${appState.coins}",
+                    label = "",
+                    palette = palette,
+                    isLarge = true
+                )
             }
-
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()) {
                 when (screen) {
                     Screen.HOME -> {
                         Box(modifier = Modifier.fillMaxSize()) {
                             val targetIndex = kotlin.math.max(0, appState.highestUnlockedLevel - 1)
                             val startIndex = kotlin.math.max(0, targetIndex - 1)
-                            val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = startIndex)
-
+                            val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+                                initialFirstVisibleItemIndex = startIndex
+                            )
                             androidx.compose.runtime.LaunchedEffect(targetIndex) {
-                                listState.animateScrollToItem(targetIndex)
+                                listState.animateScrollToItem(
+                                    targetIndex
+                                )
                             }
-
                             LazyColumn(
                                 state = listState,
                                 userScrollEnabled = false,
                                 reverseLayout = true,
-                                contentPadding = PaddingValues(top = 160.dp, bottom = 210.dp),
+                                contentPadding = PaddingValues(top = 160.dp, bottom = 120.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight()
                             ) {
                                 items(appState.highestUnlockedLevel + 10) { index ->
                                     val level = index + 1
@@ -1912,17 +2231,29 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                     )
                                 }
                             }
-
-                            Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 32.dp, end = 32.dp, bottom = 24.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(start = 32.dp, end = 32.dp, bottom = 24.dp)
+                            ) {
                                 Button(
-                                    onClick = { if (appState.lives > 0) viewModel.startLevel(appState.highestUnlockedLevel) },
+                                    onClick = {
+                                        if (appState.lives > 0) viewModel.startLevel(
+                                            appState.highestUnlockedLevel
+                                        )
+                                    },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (appState.lives > 0) palette.buttonAccent else palette.surfaceContainer,
-                                        contentColor = if (appState.lives > 0) Color(0xFF1E293B) else palette.textPrimary.copy(alpha = 0.5f),
+                                        contentColor = if (appState.lives > 0) Color(0xFF1E293B) else palette.textPrimary.copy(
+                                            alpha = 0.5f
+                                        )
                                     ),
                                     shape = CircleShape,
                                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
-                                    modifier = Modifier.fillMaxWidth().height(64.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(64.dp)
                                 ) {
                                     Text(
                                         if (appState.lives > 0) "PLAY LEVEL ${appState.highestUnlockedLevel}" else "OUT OF LIVES",
@@ -1934,106 +2265,156 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                             }
                         }
                     }
+
                     Screen.SHOP -> {
                         @Suppress("ContextCastToActivity")
-                        val activity = androidx.activity.compose.LocalActivity.current ?: LocalContext.current as Activity
+                        val activity = androidx.activity.compose.LocalActivity.current
+                            ?: LocalContext.current as Activity
                         val billingManager = LocalBillingManager.current
                         val productDetails by billingManager.productDetails.collectAsState()
-
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp),
-                            contentPadding = PaddingValues(top = 16.dp, bottom = 170.dp)
+                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp)
                         ) {
                             item {
-                                Text("Buy Coins", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Buy Coins",
+                                    color = palette.textPrimary,
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                ); Spacer(modifier = Modifier.height(16.dp))
                             }
-
                             val coinPacks = listOf(
                                 Pair(1000, "coin_pack_1000"),
                                 Pair(5000, "coin_pack_5000"),
                                 Pair(12000, "coin_pack_12000")
                             )
-
                             items(coinPacks.size) { index ->
                                 val pack = coinPacks[index]
-                                val amount = pack.first
                                 val productDetail = productDetails[pack.second]
-                                val defaultPrice = if (amount == 1000) "$0.99" else if (amount == 5000) "$3.99" else "$7.99"
-                                val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: defaultPrice
-
+                                val defaultPrice =
+                                    if (pack.first == 1000) "$0.99" else if (pack.first == 5000) "$3.99" else "$7.99"
+                                val price =
+                                    productDetail?.oneTimePurchaseOfferDetails?.formattedPrice
+                                        ?: defaultPrice
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
-                                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                                        .background(
+                                            palette.surfaceContainer,
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Color.White.copy(alpha = 0.4f),
+                                            RoundedCornerShape(16.dp)
+                                        )
                                         .padding(16.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(Icons.Default.Star, contentDescription = "Coins", tint = Color(0xFFFBBF24))
-                                        Text("$amount Coins", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = "Coins",
+                                            tint = Color(0xFFFBBF24)
+                                        )
+                                        Text(
+                                            "${pack.first} Coins",
+                                            color = palette.textPrimary,
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
                                     Button(
                                         onClick = {
-                                            billingManager.initiatePurchaseFlow(activity, pack.second) {
-                                                viewModel.addCoins(amount)
-                                            }
+                                            billingManager.initiatePurchaseFlow(
+                                                activity,
+                                                pack.second
+                                            ) { viewModel.addCoins(pack.first) }
                                         },
                                         shape = CircleShape,
-                                        colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
-                                    ) {
-                                        Text(price, fontWeight = FontWeight.ExtraBold)
-                                    }
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = palette.buttonAccent,
+                                            contentColor = Color(0xFF1E293B)
+                                        )
+                                    ) { Text(price, fontWeight = FontWeight.ExtraBold) }
                                 }
                             }
-
                             if (!appState.adsRemoved) {
                                 item {
                                     Spacer(modifier = Modifier.height(32.dp))
-                                    Text("Premium", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                                    Spacer(modifier = Modifier.height(16.dp))
-
-                                    val productDetail = productDetails["remove_ads"]
-                                    val price = productDetail?.oneTimePurchaseOfferDetails?.formattedPrice ?: "$9.99"
-
+                                    Text(
+                                        "Premium",
+                                        color = palette.textPrimary,
+                                        fontSize = 28.sp,
+                                        fontWeight = FontWeight.ExtraBold
+                                    ); Spacer(modifier = Modifier.height(16.dp))
+                                    val price =
+                                        productDetails["remove_ads"]?.oneTimePurchaseOfferDetails?.formattedPrice
+                                            ?: "$9.99"
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
-                                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                                            .background(
+                                                palette.surfaceContainer,
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                Color.White.copy(alpha = 0.4f),
+                                                RoundedCornerShape(16.dp)
+                                            )
                                             .padding(16.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Icon(Icons.Default.Star, contentDescription = "Premium", tint = Color(0xFFFBBF24))
-                                            Text("Remove Ads", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Star,
+                                                contentDescription = "Premium",
+                                                tint = Color(0xFFFBBF24)
+                                            )
+                                            Text(
+                                                "Remove Ads",
+                                                color = palette.textPrimary,
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
                                         Button(
                                             onClick = {
-                                                billingManager.initiatePurchaseFlow(activity, "remove_ads") {
-                                                    viewModel.removeAds()
-                                                }
+                                                billingManager.initiatePurchaseFlow(
+                                                    activity,
+                                                    "remove_ads"
+                                                ) { viewModel.removeAds() }
                                             },
                                             shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
-                                        ) {
-                                            Text(price, fontWeight = FontWeight.ExtraBold)
-                                        }
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = palette.buttonAccent,
+                                                contentColor = Color(0xFF1E293B)
+                                            )
+                                        ) { Text(price, fontWeight = FontWeight.ExtraBold) }
                                     }
                                 }
                             }
-
                             item {
-                                Spacer(modifier = Modifier.height(32.dp))
-                                Text("Themes", color = palette.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(32.dp)); Text(
+                                "Themes",
+                                color = palette.textPrimary,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            ); Spacer(modifier = Modifier.height(16.dp))
                             }
-
-                            // Change the numbers to 0 here if you want to test buying them for free
                             val themes = listOf(
                                 Triple("CLASSIC", "Classic", 0),
                                 Triple("NEON", "Neon Glow", 5000),
@@ -2041,88 +2422,151 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                                 Triple("COSMIC", "Cosmic", 25000),
                                 Triple("FANTASY", "Fantasy", 50000)
                             )
-
                             items(themes.size) { index ->
                                 val theme = themes[index]
-                                val themeId = theme.first
-                                val isUnlocked = appState.unlockedThemes.contains(themeId)
-                                val isActive = appState.activeTheme == themeId
-
+                                val isActive = appState.activeTheme == theme.first
+                                val isUnlocked = appState.unlockedThemes.contains(theme.first)
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(if (isActive) palette.surfaceContainer.copy(alpha = 0.6f) else palette.surfaceContainer, RoundedCornerShape(16.dp))
+                                        .background(
+                                            if (isActive) palette.surfaceContainer.copy(alpha = 0.6f) else palette.surfaceContainer,
+                                            RoundedCornerShape(16.dp)
+                                        )
                                         .border(
                                             width = if (isActive) 2.dp else 1.dp,
-                                            color = if (isActive) palette.buttonAccent else Color.White.copy(alpha = 0.4f),
+                                            color = if (isActive) palette.buttonAccent else Color.White.copy(
+                                                alpha = 0.4f
+                                            ),
                                             shape = RoundedCornerShape(16.dp)
                                         )
                                         .padding(16.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(theme.second, color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                    if (isActive) {
-                                        Text("Equipped", color = palette.buttonAccent, fontWeight = FontWeight.ExtraBold)
-                                    } else if (isUnlocked) {
-                                        Button(
-                                            onClick = { viewModel.setTheme(themeId) },
-                                            shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(containerColor = palette.buttonAccent, contentColor = Color(0xFF1E293B))
-                                        ) { Text("Equip", fontWeight = FontWeight.ExtraBold) }
-                                    } else {
-                                        Button(
-                                            onClick = { viewModel.buyTheme(themeId, theme.third) },
-                                            enabled = appState.coins >= theme.third,
-                                            shape = CircleShape,
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFFFBBF24),
-                                                contentColor = Color(0xFF1E293B),
-                                                disabledContainerColor = palette.surfaceContainer,
-                                                disabledContentColor = palette.textPrimary.copy(alpha = 0.5f)
+                                    Text(
+                                        theme.second,
+                                        color = palette.textPrimary,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (isActive) Text(
+                                        "Equipped",
+                                        color = palette.buttonAccent,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    else if (isUnlocked) Button(
+                                        onClick = { viewModel.setTheme(theme.first) },
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = palette.buttonAccent,
+                                            contentColor = Color(0xFF1E293B)
+                                        )
+                                    ) { Text("Equip", fontWeight = FontWeight.ExtraBold) }
+                                    else Button(
+                                        onClick = {
+                                            viewModel.buyTheme(
+                                                theme.first,
+                                                theme.third
                                             )
-                                        ) {
-                                            Text("${theme.third} Coins", fontWeight = FontWeight.ExtraBold)
-                                        }
+                                        },
+                                        enabled = appState.coins >= theme.third,
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFBBF24),
+                                            contentColor = Color(0xFF1E293B),
+                                            disabledContainerColor = palette.surfaceContainer,
+                                            disabledContentColor = palette.textPrimary.copy(alpha = 0.5f)
+                                        )
+                                    ) {
+                                        Text(
+                                            "${theme.third} Coins",
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
                                     }
                                 }
                             }
                         }
                     }
+
                     Screen.SETTINGS -> {
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(32.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            Text("Settings", color = palette.textPrimary, fontSize = 32.sp, fontWeight = FontWeight.ExtraBold)
-
-                            Row(modifier = Modifier.fillMaxWidth().background(palette.surfaceContainer, RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Sound", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Settings",
+                                color = palette.textPrimary,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
+                                    .border(
+                                        1.dp,
+                                        Color.White.copy(alpha = 0.4f),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Sound",
+                                    color = palette.textPrimary,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Switch(
                                     checked = appState.soundEnabled,
                                     onCheckedChange = { viewModel.toggleSound() },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = palette.buttonAccent, checkedTrackColor = palette.buttonAccent.copy(alpha=0.5f))
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = palette.buttonAccent,
+                                        checkedTrackColor = palette.buttonAccent.copy(alpha = 0.5f)
+                                    )
                                 )
                             }
-
-                            Row(modifier = Modifier.fillMaxWidth().background(palette.surfaceContainer, RoundedCornerShape(16.dp)).border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                Text("Haptic Feedback", color = palette.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(palette.surfaceContainer, RoundedCornerShape(16.dp))
+                                    .border(
+                                        1.dp,
+                                        Color.White.copy(alpha = 0.4f),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Haptic Feedback",
+                                    color = palette.textPrimary,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
                                 Switch(
                                     checked = appState.hapticEnabled,
                                     onCheckedChange = { viewModel.toggleHaptics() },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = palette.buttonAccent, checkedTrackColor = palette.buttonAccent.copy(alpha=0.5f))
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = palette.buttonAccent,
+                                        checkedTrackColor = palette.buttonAccent.copy(alpha = 0.5f)
+                                    )
                                 )
                             }
                         }
                     }
+
                     else -> {}
                 }
             }
-
-            // Bottom Tabs Island
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 32.dp, vertical = 12.dp)
+                    .padding(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 24.dp)
                     .fillMaxWidth()
                     .shadow(16.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.1f))
                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
@@ -2131,17 +2575,21 @@ fun MainTabScreen(viewModel: BallSortViewModel, screen: Screen) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TabItem(Icons.Default.ShoppingCart, "Shop", screen == Screen.SHOP) { viewModel.navigate(Screen.SHOP) }
-                TabItem(Icons.Default.Home, "Home", screen == Screen.HOME) { viewModel.navigate(Screen.HOME) }
-                TabItem(Icons.Default.Settings, "Settings", screen == Screen.SETTINGS) { viewModel.navigate(Screen.SETTINGS) }
-            }
-
-            // Banner Ad at the very bottom
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                AdmobBanner(appState.adsRemoved)
+                TabItem(
+                    Icons.Default.ShoppingCart,
+                    "Shop",
+                    screen == Screen.SHOP
+                ) { viewModel.navigate(Screen.SHOP) }
+                TabItem(Icons.Default.Home, "Home", screen == Screen.HOME) {
+                    viewModel.navigate(
+                        Screen.HOME
+                    )
+                }
+                TabItem(
+                    Icons.Default.Settings,
+                    "Settings",
+                    screen == Screen.SETTINGS
+                ) { viewModel.navigate(Screen.SETTINGS) }
             }
         }
     }
